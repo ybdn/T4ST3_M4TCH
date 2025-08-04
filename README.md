@@ -181,7 +181,7 @@ Le projet est divisé en deux dossiers principaux :
 
 1.  **Clonez le dépôt :**
     ```bash
-    git clone https://github.com/ybdn/taste-match.git
+    git clone https://github.com/ybdn/T4ST3_M4TCH.git
     cd taste-match
     ```
 
