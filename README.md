@@ -8,19 +8,19 @@ Ce projet a pour ambition de créer une application sociale engageante où l'int
 ## **📖 Table des matières**
 
 * [🎯 À propos du projet](#-à-propos-du-projet)  
-  * [Proposition de valeur unique](https://www.google.com/search?q=%23proposition-de-valeur-unique)  
-  * [Audience cible](https://www.google.com/search?q=%23audience-cible)  
-* [✨ Fonctionnalités clés](https://www.google.com/search?q=%23-fonctionnalit%C3%A9s-cl%C3%A9s)  
-* [🛠️ Stack technologique](https://www.google.com/search?q=%23%EF%B8%8F-stack-technologique)  
-* [🏗️ Architecture](https://www.google.com/search?q=%23%EF%B8%8F-architecture)  
-* [🚀 Feuille de route du projet](https://www.google.com/search?q=%23-feuille-de-route-du-projet)  
-* [🔒 Sécurité (Approche DevSecOps)](https://www.google.com/search?q=%23-s%C3%A9curit%C3%A9-approche-devsecops)  
-* [🏁 Démarrage rapide](https://www.google.com/search?q=%23-d%C3%A9marrage-rapide)  
-* [📊 Indicateurs clés de performance (KPIs)](https://www.google.com/search?q=%23-indicateurs-cl%C3%A9s-de-performance-kpis)  
-* [⚖️ Légalité et conformité](https://www.google.com/search?q=%23%EF%B8%8F-l%C3%A9galit%C3%A9-et-conformit%C3%A9)  
-* [🤝 Contribution](https://www.google.com/search?q=%23-contribution)  
-* [📄 Licence](https://www.google.com/search?q=%23-licence)  
-* [🙏 Remerciements](https://www.google.com/search?q=%23-remerciements)
+  * [Proposition de valeur unique](#proposition-de-valeur-unique)  
+  * [Audience cible](#audience-cible)  
+* [✨ Fonctionnalités clés](#-fonctionnalités-clés)  
+* [🛠️ Stack technologique](#-stack-technologique)  
+* [🏗️ Architecture](#-architecture)  
+* [🚀 Feuille de route du projet](#-feuille-de-route-du-projet)  
+* [🔒 Sécurité (Approche DevSecOps)](#-sécurité-approche-devsecops)  
+* [🏁 Démarrage rapide](#-démarrage-rapide)  
+* [📊 Indicateurs clés de performance (KPIs)](#-indicateurs-clés-de-performance-kpis)  
+* [⚖️ Légalité et conformité](#-légalité-et-conformité)  
+* [🤝 Contribution](#-contribution)  
+* [📄 Licence](#-licence)  
+* [🙏 Remerciements](#-remerciements)
 
 ## **🎯 À propos du projet**
 
@@ -144,7 +144,7 @@ La sécurité n'est pas une réflexion après coup, mais une pratique continue i
 Pour lancer l'environnement de développement local, assurez-vous d'avoir **Git** et **Docker** (avec Docker Compose) installés sur votre machine.
 
 1. **Clonez le dépôt :**  
-   git clone https://github.com/ybdn/taste-match.git  
+   git clone <https://github.com/ybdn/taste-match.git>  
    cd taste-match
 
 2. Configurez les variables d'environnement :  
@@ -160,7 +160,7 @@ Pour lancer l'environnement de développement local, assurez-vous d'avoir **Git*
    Dans un autre terminal, une fois les conteneurs lancés, exécutez les migrations initiales de Django.  
    docker-compose exec web python manage.py migrate
 
-🎉 Votre environnement de développement Taste Match est maintenant accessible à l'adresse http://localhost:8000 \!
+🎉 Votre environnement de développement Taste Match est maintenant accessible à l'adresse <http://localhost:8000> \!
 
 ## **📊 Indicateurs clés de performance (KPIs)**
 
