@@ -69,33 +69,33 @@ La stack a été choisie pour la **scalabilité, la sécurité et la rapidité d
 
 L'architecture est conçue pour être modulaire, résiliente et scalable.
 
-                  \+-------------------------+  
-Utilisateur \----\> | Navigateur Web (Client) |  
-                  \+-------------------------+  
-                           | (Requête HTTP)  
-                           v  
+                    \+-------------------------+  
+Utilisateur \----\>  | Navigateur Web (Client) |  
+                    \+-------------------------+  
+                                | (Requête HTTP)  
+                                v  
 \+-------------------------------------------------------------+  
-|                     Serveur / Backend                       |  
-|                                                             |  
-|  \+-----------------+      \+----------------+      \+---------+  
-|  |   Serveur Web   | \<--\> |  App Django    | \<--\> |  Cache  |  
-|  |    (Gunicorn)   |      |   (Logique)    |      | (Redis) |  
-|  \+-----------------+      \+-------+--------+      \+----+----+  
-|                                   |                     | (API Cache)  
-| (Lecture/Écriture)                | (Lecture/Écriture)  |  
-|   v                               v                     v  
-| \+-----------------+      \+-----------------+      \+----------------+  
-| | File de tâches  |      | Base de Données |      |  APIs Externes |  
-| |    (Celery)     |      |  (PostgreSQL)   |      | (TMDb, Spotify)|  
-| \+-----------------+      \+-----------------+      \+----------------+  
+|                     Serveur / Backend                        |  
+|                                                              |  
+|  \+-----------------+       \+----------------+       \+---------+  
+|  |   Serveur Web   |  \<--\> |  App Django    | \<--\> |  Cache  |  
+|  |    (Gunicorn)   |         |   (Logique)    |        | (Redis) |  
+|  \+-----------------+       \+-------+--------+       \+----+----+  
+|                                      |                         | (API Cache)  
+| (Lecture/Écriture)                   | (Lecture/Écriture)      |  
+|   v                                  v                         v  
+| \+-----------------+        \+-----------------+      \+----------------+  
+| | File de tâches  |          | Base de Données |      |  APIs Externes  |  
+| |    (Celery)     |          |  (PostgreSQL)   |      | (TMDb, Spotify) |  
+| \+-----------------+        \+-----------------+      \+----------------+  
 |        ^                                                          |  
 |        | (Tâches Asynchrones)                                     |  
 |        |                                                          |  
-|  \+-----------------+                                              |  
-|  |  Worker Celery  | \--------------------------------------------+  
-|  \+-----------------+  (Ex: Envoi de notifications, etc.)          |  
-|                                                             |  
-\+-------------------------------------------------------------+
+|  \+-----------------+                                             |  
+|  |  Worker Celery   | \-------------------------------------------+  
+|  \+-----------------+  (Ex: Envoi de notifications, etc.)         |  
+|                                                                   |  
+\+------------------------------------------------------------------+
 
 * **Couche de Service API :** Un module dédié gère toutes les interactions avec les APIs externes pour centraliser la logique et la gestion des erreurs.  
 * **Traitement Asynchrone :** Celery et Redis sont utilisés pour décharger les tâches longues (comme l'envoi d'emails) de la requête principale, assurant que l'interface utilisateur ne soit jamais bloquée.
@@ -144,7 +144,7 @@ La sécurité n'est pas une réflexion après coup, mais une pratique continue i
 Pour lancer l'environnement de développement local, assurez-vous d'avoir **Git** et **Docker** (avec Docker Compose) installés sur votre machine.
 
 1. **Clonez le dépôt :**  
-   git clone https://github.com/votre-utilisateur/taste-match.git  
+   git clone https://github.com/ybdn/taste-match.git  
    cd taste-match
 
 2. Configurez les variables d'environnement :  
