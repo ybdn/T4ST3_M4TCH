@@ -7,7 +7,7 @@ Ce projet a pour ambition de créer une application sociale engageante où l'int
 
 ## **📖 Table des matières**
 
-* [🎯 À propos du projet](#à-propos-du-projet)  
+* [🎯 À propos du projet](#-à-propos-du-projet)  
   * [Proposition de valeur unique](https://www.google.com/search?q=%23proposition-de-valeur-unique)  
   * [Audience cible](https://www.google.com/search?q=%23audience-cible)  
 * [✨ Fonctionnalités clés](https://www.google.com/search?q=%23-fonctionnalit%C3%A9s-cl%C3%A9s)  
