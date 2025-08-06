@@ -1,0 +1,60 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Améliorations pour mobile */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  .MuiPaper-root {
+    margin: 8px 0 !important;
+  }
+}
+
+/* Animation pour les transitions */
+.MuiBottomNavigation-root .MuiBottomNavigationAction-root {
+  transition: all 0.2s ease-in-out;
+}
+
+.MuiBottomNavigation-root .MuiBottomNavigationAction-root.Mui-selected {
+  transform: translateY(-2px);
+}
+
+/* Style pour les icônes de suppression */
+.MuiListItemSecondaryAction-root .MuiIconButton-root {
+  color: #d32f2f;
+  transition: all 0.2s ease-in-out;
+}
+
+.MuiListItemSecondaryAction-root .MuiIconButton-root:hover {
+  background-color: rgba(211, 47, 47, 0.1);
+  transform: scale(1.1);
+}
+
+/* Style pour les boutons d'édition */
+.MuiIconButton-root[aria-label="edit"] {
+  color: #1976d2;
+  transition: all 0.2s ease-in-out;
+}
+
+.MuiIconButton-root[aria-label="edit"]:hover {
+  background-color: rgba(25, 118, 210, 0.1);
+  transform: scale(1.1);
+} 

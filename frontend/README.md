@@ -1,69 +1,110 @@
-# React + TypeScript + Vite
+# Taste Match Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Dashboard - Issue #8 : Intégration Material-UI
 
-Currently, two official plugins are available:
+### ✅ Accomplissements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+#### 1. Installation et Configuration
+- ✅ Installation de Material-UI (`@mui/material`, `@emotion/react`, `@emotion/styled`)
+- ✅ Installation des icônes Material-UI (`@mui/icons-material`)
+- ✅ Installation de la police Roboto (`@fontsource/roboto`)
+- ✅ Configuration du thème personnalisé avec les couleurs Taste Match
 
-## Expanding the ESLint configuration
+#### 2. Structure du Dashboard
+Basé sur le wireframe `03-dashboard.ascii`, le dashboard comprend :
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+**Header (AppBar)**
+- Titre "Taste Match"
+- Bouton notifications
+- Bouton profil
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Contenu Principal**
+- Navigation retour au dashboard
+- Titre de liste éditable ("Mes 10 films de SF préférés")
+- Description éditable
+- Liste des éléments avec boutons de suppression
+- Bouton "Ajouter un élément"
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+**Bottom Navigation**
+- Accueil
+- Découvrir
+- MATCH !
+- Mes listes
+- Ajout rapide
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### 3. Fonctionnalités Implémentées
+- ✅ Interface responsive (mobile-first)
+- ✅ Édition en ligne du titre et de la description
+- ✅ Navigation entre les sections (structure prête)
+- ✅ Animations et transitions fluides
+- ✅ Thème personnalisé avec couleurs Taste Match
+- ✅ Accessibilité (aria-labels, navigation clavier)
+
+#### 4. Architecture du Code
+```
+src/
+├── components/
+│   └── Dashboard.tsx     # Composant principal du dashboard
+├── App.tsx              # Point d'entrée de l'application
+├── main.tsx             # Configuration du thème et rendu
+└── index.css            # Styles globaux et animations
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 🎨 Design System
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Couleurs**
+- Primary: `#1976d2` (Bleu Material-UI)
+- Secondary: `#dc004e` (Rose/Rouge)
+- Background: `#f5f5f5` (Gris clair)
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**Typographie**
+- Police: Roboto (Material Design)
+- Hiérarchie claire avec différentes tailles et poids
+
+**Composants**
+- AppBar avec ombre subtile
+- Paper avec coins arrondis
+- BottomNavigation avec bordure supérieure
+- Animations sur les interactions
+
+### 🚀 Prochaines Étapes
+
+1. **Implémentation des fonctionnalités**
+   - Système d'ajout/suppression d'éléments
+   - Navigation entre les différentes sections
+   - Intégration avec l'API backend
+
+2. **Pages supplémentaires**
+   - Page de connexion/inscription
+   - Page de découverte
+   - Page de matching
+   - Page d'ajout rapide
+
+3. **Améliorations UX**
+   - Animations de transition entre les pages
+   - Feedback utilisateur (toasts, loading states)
+   - Gestion des erreurs
+
+### 📱 Responsive Design
+
+L'interface est optimisée pour :
+- **Mobile** : Navigation bottom, espacement adapté
+- **Tablet** : Layout flexible
+- **Desktop** : Interface complète avec plus d'espace
+
+### 🔧 Technologies Utilisées
+
+- **React 18** avec TypeScript
+- **Material-UI v5** (MUI)
+- **Emotion** pour les styles
+- **Vite** pour le build
+- **Roboto** pour la typographie
+
+### 🎯 Correspondance avec le Wireframe
+
+Le dashboard implémenté correspond fidèlement au wireframe `03-dashboard.ascii` :
+- ✅ Structure identique (header, contenu, bottom nav)
+- ✅ Éléments de liste numérotés
+- ✅ Boutons d'action (éditer, supprimer, ajouter)
+- ✅ Navigation avec icônes et labels
+- ✅ Layout responsive et moderne
