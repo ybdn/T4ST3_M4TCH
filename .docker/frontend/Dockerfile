@@ -5,11 +5,10 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copier les fichiers de dépendances
-COPY ./frontend/package.json ./frontend/yarn.lock* ./
-# Si vous utilisez npm, vous pouvez changer yarn.lock en package-lock.json
+COPY ./frontend/package.json ./frontend/package-lock.json* ./
 
 # Installer les dépendances
-RUN yarn install
+RUN npm install
 
 # Copier le code source de l'application
 COPY ./frontend /app/
@@ -18,4 +17,4 @@ COPY ./frontend /app/
 EXPOSE 3000
 
 # Commande pour démarrer le serveur de développement
-CMD ["yarn", "dev"]
+CMD ["npm", "run", "dev"]
