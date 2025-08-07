@@ -57,6 +57,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bottomNavValue, setBottomNavValue] = useState(3); // "Mes listes" selected
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user } = useAuth();
 
   const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {

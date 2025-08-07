@@ -7,22 +7,16 @@ import {
   Box,
   Container,
   Paper,
-  Button,
-  TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Chip,
   BottomNavigation,
   BottomNavigationAction,
   Alert,
-  CircularProgress,
-  Autocomplete
+  Snackbar,
+  Tab,
+  Tabs
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -36,9 +30,10 @@ import {
   LibraryMusic as MusicIcon,
   MenuBook as BookIcon,
   Tv as TvIcon,
-  Search as SearchIcon,
-  Save as SaveIcon
+  Search as SearchIcon
 } from '@mui/icons-material';
+import SearchBar from '../components/SearchBar';
+import SuggestionCards from '../components/SuggestionCards';
 
 interface QuickAddPageProps {
   onNavigate?: (section: string) => void;
@@ -46,13 +41,11 @@ interface QuickAddPageProps {
 
 const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
   const [bottomNavValue, setBottomNavValue] = useState(4); // "Ajout rapide" selected
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedList, setSelectedList] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [tabValue, setTabValue] = useState(0);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
@@ -61,72 +54,83 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
   };
 
   const categories = [
-    { value: 'film', label: 'Film', icon: <MovieIcon /> },
-    { value: 'serie', label: 'Série', icon: <TvIcon /> },
-    { value: 'musique', label: 'Musique', icon: <MusicIcon /> },
-    { value: 'livre', label: 'Livre', icon: <BookIcon /> }
+    { value: 'ALL', label: 'Toutes catégories', icon: <AddIcon />, color: '#9c27b0' },
+    { value: 'FILMS', label: 'Films', icon: <MovieIcon />, color: '#e53e3e' },
+    { value: 'SERIES', label: 'Séries', icon: <TvIcon />, color: '#3182ce' },
+    { value: 'MUSIQUE', label: 'Musique', icon: <MusicIcon />, color: '#38a169' },
+    { value: 'LIVRES', label: 'Livres', icon: <BookIcon />, color: '#d69e2e' }
   ];
 
-  const myLists = [
-    { value: 'films-favoris', label: 'Mes Films Favoris' },
-    { value: 'musique-travail', label: 'Musique de Travail' },
-    { value: 'livres-a-lire', label: 'Livres à Lire' }
-  ];
+  interface SearchResult {
+    title: string;
+    description: string;
+    category: string;
+    category_display: string;
+    popularity: number;
+  }
 
-  const popularTags = [
-    'Action', 'Comédie', 'Drame', 'Sci-Fi', 'Thriller',
-    'Rock', 'Pop', 'Jazz', 'Classique', 'Électronique',
-    'Roman', 'Biographie', 'Science-Fiction', 'Fantasy', 'Histoire'
-  ];
+  interface Suggestion {
+    title: string;
+    description: string;
+    category: string;
+    category_display: string;
+    popularity: number;
+    type: 'popular' | 'suggestion';
+  }
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (!selectedCategory || !title.trim()) {
-      return;
-    }
-
-    setLoading(true);
-    
+  const quickAddItem = async (title: string, description: string, category: string) => {
     try {
-      // Simuler un appel API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log('Nouvel élément ajouté:', {
-        category: selectedCategory,
-        title,
-        description,
-        tags,
-        list: selectedList
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://localhost:8000/api/quick-add/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title, description, category })
       });
-      
-      setSuccess(true);
-      
-      // Réinitialiser le formulaire
-      setTitle('');
-      setDescription('');
-      setTags([]);
-      setSelectedList('');
-      
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
-    } finally {
-      setLoading(false);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de l\'ajout');
+      }
+
+      const data = await response.json();
+      setSuccessMessage(data.message);
+      setSnackbarOpen(true);
+      return data;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      setErrorMessage(message);
+      setSnackbarOpen(true);
+      throw error;
     }
   };
 
-  const quickSuggestions = [
-    { title: "The Batman", category: "film", tags: ["Action", "Thriller"] },
-    { title: "Stranger Things", category: "serie", tags: ["Sci-Fi", "Thriller"] },
-    { title: "Bad Bunny", category: "musique", tags: ["Reggaeton", "Pop"] },
-    { title: "Dune", category: "livre", tags: ["Sci-Fi", "Épique"] }
-  ];
+  const handleSearchSelect = async (result: SearchResult) => {
+    await quickAddItem(result.title, result.description, result.category);
+  };
 
-  const handleQuickAdd = (suggestion: typeof quickSuggestions[0]) => {
-    setSelectedCategory(suggestion.category);
-    setTitle(suggestion.title);
-    setTags(suggestion.tags);
+  const handleSuggestionAdd = async (suggestion: Suggestion) => {
+    await quickAddItem(suggestion.title, suggestion.description, suggestion.category);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const handleCategoryChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setSelectedCategory(event.target.value as string);
+  };
+
+  const getSelectedCategoryConfig = () => {
+    return categories.find(cat => cat.value === selectedCategory) || categories[0];
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+    setSuccessMessage('');
+    setErrorMessage('');
   };
 
   return (
@@ -147,162 +151,154 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
       </AppBar>
 
       {/* Contenu principal */}
-      <Container sx={{ flexGrow: 1, py: 2, overflow: 'auto' }}>
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            Élément ajouté avec succès !
-          </Alert>
-        )}
-
-        {/* Suggestions rapides */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Suggestions rapides
-          </Typography>
-          <Grid container spacing={2}>
-            {quickSuggestions.map((suggestion, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
-                  <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                    {categories.find(c => c.value === suggestion.category)?.icon}
-                    <Typography variant="body1" sx={{ mt: 1 }}>
-                      {suggestion.title}
-                    </Typography>
-                    <Box sx={{ mt: 1 }}>
-                      {suggestion.tags.slice(0, 2).map(tag => (
-                        <Chip key={tag} label={tag} size="small" sx={{ m: 0.25 }} />
-                      ))}
+      <Container 
+        maxWidth="sm" 
+        sx={{ 
+          flexGrow: 1, 
+          py: 1, 
+          px: 2, 
+          overflow: 'auto',
+          pb: 9 // Espace pour la bottom navigation
+        }}
+      >
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
+          {/* Filtre par catégorie */}
+          <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              gutterBottom
+              sx={{ 
+                fontSize: { xs: '1.5rem', sm: '2.125rem' },
+                fontWeight: 'bold',
+                mb: 2
+              }}
+            >
+              Ajout Rapide
+            </Typography>
+            
+            <FormControl 
+              fullWidth 
+              sx={{ 
+                mb: 2,
+                '& .MuiInputBase-input': {
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }
+              }}
+            >
+              <InputLabel>Filtrer par catégorie</InputLabel>
+              <Select
+                value={selectedCategory}
+                onChange={handleCategoryChange}
+                label="Filtrer par catégorie"
+              >
+                {categories.map((category) => (
+                  <MenuItem key={category.value} value={category.value}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box 
+                        sx={{ 
+                          color: category.color,
+                          display: 'flex', 
+                          alignItems: 'center' 
+                        }}
+                      >
+                        {category.icon}
+                      </Box>
+                      {category.label}
                     </Box>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'center', pt: 0 }}>
-                    <Button 
-                      size="small" 
-                      onClick={() => handleQuickAdd(suggestion)}
-                    >
-                      Ajouter
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-
-        {/* Formulaire d'ajout */}
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Ajouter un nouvel élément
-          </Typography>
-          
-          <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              {/* Catégorie */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Catégorie</InputLabel>
-                  <Select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    label="Catégorie"
-                  >
-                    {categories.map((category) => (
-                      <MenuItem key={category.value} value={category.value}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {category.icon}
-                          {category.label}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Liste de destination */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Ajouter à une liste</InputLabel>
-                  <Select
-                    value={selectedList}
-                    onChange={(e) => setSelectedList(e.target.value)}
-                    label="Ajouter à une liste"
-                  >
-                    {myLists.map((list) => (
-                      <MenuItem key={list.value} value={list.value}>
-                        {list.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Titre */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Titre"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Inception, The Beatles, Game of Thrones..."
-                />
-              </Grid>
-
-              {/* Description */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Description (optionnelle)"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Pourquoi aimez-vous cet élément ?"
-                />
-              </Grid>
-
-              {/* Tags */}
-              <Grid item xs={12}>
-                <Autocomplete
-                  multiple
-                  options={popularTags}
-                  value={tags}
-                  onChange={(event, newValue) => setTags(newValue)}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        variant="outlined"
-                        label={option}
-                        {...getTagProps({ index })}
-                      />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Tags"
-                      placeholder="Ajoutez des tags..."
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Bouton de soumission */}
-              <Grid item xs={12}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  disabled={!selectedCategory || !title.trim() || loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-                >
-                  {loading ? 'Ajout en cours...' : 'Ajouter à ma collection'}
-                </Button>
-              </Grid>
-            </Grid>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
+
+          {/* Onglets */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              variant="fullWidth"
+              sx={{
+                '& .MuiTab-root': {
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  minHeight: { xs: 40, sm: 48 }
+                }
+              }}
+            >
+              <Tab 
+                icon={<SearchIcon />} 
+                label="Rechercher" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<AddIcon />} 
+                label="Suggestions" 
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
+
+          {/* Contenu des onglets */}
+          {tabValue === 0 && (
+            <Box>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 2,
+                  fontSize: { xs: '1rem', sm: '1.25rem' },
+                  fontWeight: 'medium'
+                }}
+              >
+                Rechercher et Ajouter
+              </Typography>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  mb: 3,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
+                Tapez pour rechercher dans la base de données ou ajouter directement à vos listes
+              </Typography>
+              <SearchBar
+                category={selectedCategory === 'ALL' ? undefined : selectedCategory}
+                onSelect={handleSearchSelect}
+                onQuickAdd={handleSearchSelect}
+                placeholder={`Rechercher ${selectedCategory === 'ALL' ? 'dans toutes les catégories' : 'des ' + getSelectedCategoryConfig().label.toLowerCase()}...`}
+                autoFocus
+              />
+            </Box>
+          )}
+
+          {tabValue === 1 && (
+            <Box>
+              <SuggestionCards
+                category={selectedCategory === 'ALL' ? undefined : selectedCategory}
+                onAdd={handleSuggestionAdd}
+                title={`Suggestions ${selectedCategory === 'ALL' ? 'Populaires' : getSelectedCategoryConfig().label}`}
+                limit={6}
+              />
+            </Box>
+          )}
         </Paper>
       </Container>
+
+      {/* Snackbar pour les messages */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={successMessage ? 'success' : 'error'}
+          sx={{ width: '100%' }}
+        >
+          {successMessage || errorMessage}
+        </Alert>
+      </Snackbar>
 
       {/* Bottom Navigation */}
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
@@ -319,8 +315,6 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
         </BottomNavigation>
       </Paper>
 
-      {/* Espace pour éviter que le contenu soit caché par la bottom navigation */}
-      <Box sx={{ height: 56 }} />
     </Box>
   );
 };

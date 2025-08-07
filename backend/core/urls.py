@@ -1,6 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import health_check, register_user, get_user_profile, ListViewSet, ListItemViewSet
+from .views import (
+    health_check, register_user, get_user_profile, 
+    ListViewSet, ListItemViewSet,
+    search_items, get_suggestions, quick_add_item
+)
 
 router = DefaultRouter()
 router.register(r'lists', ListViewSet, basename='list')
@@ -10,6 +14,10 @@ urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('auth/register/', register_user, name='auth_register'),
     path('users/me/', get_user_profile, name='user_profile'),
+    # Search and suggestions endpoints
+    path('search/', search_items, name='search_items'),
+    path('suggestions/', get_suggestions, name='get_suggestions'), 
+    path('quick-add/', quick_add_item, name='quick_add_item'),
     # Nested routes for list items
     path('lists/<int:list_pk>/items/', ListItemViewSet.as_view({
         'get': 'list',
