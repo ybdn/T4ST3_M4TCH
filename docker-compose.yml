@@ -38,7 +38,7 @@ services:
     restart: always
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - node_modules_volume:/app/node_modules
     ports:
       - "3000:3000"
     env_file:
@@ -48,3 +48,4 @@ services:
 
 volumes:
   postgres_data:
+  node_modules_volume:
