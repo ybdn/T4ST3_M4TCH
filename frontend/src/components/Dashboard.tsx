@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -32,14 +32,25 @@ import {
 
 interface DashboardProps {
   onNavigate?: (section: string) => void;
+  listId?: number;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+interface TasteList {
+  id: number;
+  name: string;
+  description: string;
+  owner: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate, listId = 1 }) => {
   const [bottomNavValue, setBottomNavValue] = useState(0);
-  const [listTitle, setListTitle] = useState('Mes 10 films de SF préférés');
-  const [listDescription, setListDescription] = useState('Une collection des meilleurs films de SF modernes.');
+  const [list, setList] = useState<TasteList | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const movies = [
     'Blade Runner 2049',
@@ -48,6 +59,51 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     'Interstellar',
     'The Martian'
   ];
+
+  // Récupérer les détails de la liste
+  useEffect(() => {
+    const fetchList = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`http://localhost:8000/api/lists/${listId}/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setList(data);
+        } else {
+          // Si la liste n'existe pas, utiliser des données par défaut
+          setList({
+            id: listId,
+            name: 'Mes 10 films de SF préférés',
+            description: 'Une collection des meilleurs films de SF modernes.',
+            owner: 'demo',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement de la liste:', err);
+        setError('Erreur lors du chargement de la liste');
+        // Utiliser des données par défaut en cas d'erreur
+        setList({
+          id: listId,
+          name: 'Mes 10 films de SF préférés',
+          description: 'Une collection des meilleurs films de SF modernes.',
+          owner: 'demo',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchList();
+  }, [listId]);
 
   const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
@@ -97,11 +153,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           {/* Titre de la liste */}
           <Box sx={{ mb: 2 }}>
-            {isEditingTitle ? (
+            {loading ? (
+              <Typography variant="h4" component="h1">Chargement...</Typography>
+            ) : isEditingTitle ? (
               <TextField
                 fullWidth
-                value={listTitle}
-                onChange={(e) => setListTitle(e.target.value)}
+                value={list?.name || ''}
+                onChange={(e) => setList(list ? { ...list, name: e.target.value } : null)}
                 onBlur={() => setIsEditingTitle(false)}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
@@ -115,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             ) : (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
-                  {listTitle}
+                  {list?.name || 'Mes 10 films de SF préférés'}
                 </Typography>
                 <IconButton 
                   size="small" 
@@ -130,11 +188,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           {/* Description */}
           <Box sx={{ mb: 3 }}>
-            {isEditingDescription ? (
+            {loading ? (
+              <Typography variant="body1" color="text.secondary">Chargement de la description...</Typography>
+            ) : isEditingDescription ? (
               <TextField
                 fullWidth
-                value={listDescription}
-                onChange={(e) => setListDescription(e.target.value)}
+                value={list?.description || ''}
+                onChange={(e) => setList(list ? { ...list, description: e.target.value } : null)}
                 onBlur={() => setIsEditingDescription(false)}
                 variant="standard"
                 multiline
@@ -143,7 +203,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             ) : (
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                 <Typography variant="body1" color="text.secondary" sx={{ flexGrow: 1 }}>
-                  {listDescription}
+                  {list?.description || 'Une collection des meilleurs films de SF modernes.'}
                 </Typography>
                 <IconButton 
                   size="small" 
