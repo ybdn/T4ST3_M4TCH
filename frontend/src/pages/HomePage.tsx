@@ -7,12 +7,12 @@ import {
   Box,
   Container,
   Paper,
-  Grid,
   Card,
   CardContent,
   BottomNavigation,
   BottomNavigationAction
 } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import {
   Notifications as NotificationsIcon,
   AccountCircle as AccountCircleIcon,
@@ -35,7 +35,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const [bottomNavValue, setBottomNavValue] = useState(0); // "Accueil" selected
   const { user } = useAuth();
 
-  const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleBottomNavChange = (_event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
     const sections = ['accueil', 'decouvrir', 'match', 'listes', 'ajout'];
     onNavigate?.(sections[newValue]);
@@ -71,7 +71,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
         <Grid container spacing={3}>
           {/* Statistiques */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <ListIcon sx={{ fontSize: 40, color: '#1976d2', mb: 1 }} />
@@ -85,7 +85,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <FavoriteIcon sx={{ fontSize: 40, color: '#dc004e', mb: 1 }} />
@@ -99,7 +99,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <TrendingUpIcon sx={{ fontSize: 40, color: '#4caf50', mb: 1 }} />
@@ -113,7 +113,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <StarsIcon sx={{ fontSize: 40, color: '#ff9800', mb: 1 }} />
@@ -128,13 +128,13 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </Grid>
 
           {/* Actions rapides */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Actions rapides
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid xs={12} sm={6} md={3}>
                   <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
                     <CardContent sx={{ textAlign: 'center', py: 2 }}>
                       <PlaylistAddIcon sx={{ fontSize: 32, mb: 1 }} />
@@ -144,7 +144,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid xs={12} sm={6} md={3}>
                   <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
                     <CardContent sx={{ textAlign: 'center', py: 2 }}>
                       <ExploreIcon sx={{ fontSize: 32, mb: 1 }} />
@@ -154,7 +154,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid xs={12} sm={6} md={3}>
                   <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
                     <CardContent sx={{ textAlign: 'center', py: 2 }}>
                       <FavoriteIcon sx={{ fontSize: 32, mb: 1 }} />
@@ -164,7 +164,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid xs={12} sm={6} md={3}>
                   <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
                     <CardContent sx={{ textAlign: 'center', py: 2 }}>
                       <AddIcon sx={{ fontSize: 32, mb: 1 }} />
