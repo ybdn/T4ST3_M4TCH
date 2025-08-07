@@ -157,6 +157,7 @@ dmypy.json
 # AIs
 GEMINI.md
 CLAUDE.md
+.claude/
 
 # Documentation
 docs/
