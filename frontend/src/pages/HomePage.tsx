@@ -7,12 +7,12 @@ import {
   Box,
   Container,
   Paper,
+  Grid,
   Card,
   CardContent,
   BottomNavigation,
   BottomNavigationAction
 } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
 import {
   Notifications as NotificationsIcon,
   AccountCircle as AccountCircleIcon,
@@ -69,9 +69,9 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </Typography>
         </Box>
 
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Statistiques */}
-          <Grid xs={12} sm={6} md={3}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <ListIcon sx={{ fontSize: 40, color: '#1976d2', mb: 1 }} />
@@ -83,9 +83,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
 
-          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <FavoriteIcon sx={{ fontSize: 40, color: '#dc004e', mb: 1 }} />
@@ -97,9 +95,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
 
-          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <TrendingUpIcon sx={{ fontSize: 40, color: '#4caf50', mb: 1 }} />
@@ -111,9 +107,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
 
-          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <StarsIcon sx={{ fontSize: 40, color: '#ff9800', mb: 1 }} />
@@ -125,59 +119,49 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
           {/* Actions rapides */}
-          <Grid xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Actions rapides
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid xs={12} sm={6} md={3}>
-                  <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
-                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                      <PlaylistAddIcon sx={{ fontSize: 32, mb: 1 }} />
-                      <Typography variant="body1">
-                        Créer une liste
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid xs={12} sm={6} md={3}>
-                  <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
-                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                      <ExploreIcon sx={{ fontSize: 32, mb: 1 }} />
-                      <Typography variant="body1">
-                        Découvrir
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid xs={12} sm={6} md={3}>
-                  <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
-                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                      <FavoriteIcon sx={{ fontSize: 32, mb: 1 }} />
-                      <Typography variant="body1">
-                        Faire un match
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid xs={12} sm={6} md={3}>
-                  <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
-                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                      <AddIcon sx={{ fontSize: 32, mb: 1 }} />
-                      <Typography variant="body1">
-                        Ajout rapide
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Actions rapides
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+              <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                  <PlaylistAddIcon sx={{ fontSize: 32, mb: 1 }} />
+                  <Typography variant="body1">
+                    Créer une liste
+                  </Typography>
+                </CardContent>
+              </Card>
+              <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                  <ExploreIcon sx={{ fontSize: 32, mb: 1 }} />
+                  <Typography variant="body1">
+                    Découvrir
+                  </Typography>
+                </CardContent>
+              </Card>
+              <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                  <FavoriteIcon sx={{ fontSize: 32, mb: 1 }} />
+                  <Typography variant="body1">
+                    Faire un match
+                  </Typography>
+                </CardContent>
+              </Card>
+              <Card sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                  <AddIcon sx={{ fontSize: 32, mb: 1 }} />
+                  <Typography variant="body1">
+                    Ajout rapide
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Box>
+          </Paper>
+        </Box>
       </Container>
 
       {/* Bottom Navigation */}
