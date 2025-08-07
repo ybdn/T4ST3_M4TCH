@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from .serializers import RegisterSerializer
+from rest_framework import status, viewsets
+from .serializers import RegisterSerializer, ListSerializer
+from .models import List
+from .permissions import IsOwnerOrReadOnly
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -33,3 +35,16 @@ def get_user_profile(request):
         'username': user.username,
         'email': user.email
     })
+
+
+class ListViewSet(viewsets.ModelViewSet):
+    serializer_class = ListSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    
+    def get_queryset(self):
+        # Un utilisateur ne peut voir que ses propres listes
+        return List.objects.filter(owner=self.request.user)
+    
+    def perform_create(self, serializer):
+        # Automatiquement définir le propriétaire comme l'utilisateur courant
+        serializer.save(owner=self.request.user)

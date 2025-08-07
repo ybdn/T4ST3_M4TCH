@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from .models import List
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -31,3 +32,17 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
+
+
+class ListSerializer(serializers.ModelSerializer):
+    owner = serializers.StringRelatedField(read_only=True)
+    
+    class Meta:
+        model = List
+        fields = ('id', 'name', 'description', 'owner', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'owner', 'created_at', 'updated_at')
+    
+    def create(self, validated_data):
+        # Automatically set the owner to the current user
+        validated_data['owner'] = self.context['request'].user
+        return super().create(validated_data)
