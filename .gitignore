@@ -154,8 +154,9 @@ dmypy.json
 .idea/
 .vscode/
 
-# Gemini
+# AIs
 GEMINI.md
+CLAUDE.md
 
 # Documentation
 docs/
