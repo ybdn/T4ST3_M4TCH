@@ -1,115 +1,315 @@
 # Taste Match Frontend
 
-## Dashboard - Issue #8 : Intégration Material-UI
+## 🎨 Charte graphique et Design System (v2)
 
-### ✅ Accomplissements
+Style global: **noir et blanc épuré**, inspiré de X.com avec effets de verre opaque et micro-interactions subtiles.
 
-#### 1. Installation et Configuration
-- ✅ Installation de Material-UI (`@mui/material`, `@emotion/react`, `@emotion/styled`)
-- ✅ Installation des icônes Material-UI (`@mui/icons-material`)
-- ✅ Installation de la police Roboto (`@fontsource/roboto`)
-- ✅ Configuration du thème personnalisé avec les couleurs Taste Match
+### Palette révisée
 
-#### 2. Structure du Dashboard
-Basé sur le wireframe `03-dashboard.ascii`, le dashboard comprend :
+#### Couleurs principales
 
-**Header (AppBar)**
-- Titre "Taste Match"
-- Bouton notifications
-- Bouton profil
+- **Fond principal**: `#000000` (noir pur)
+- **Surfaces**: `#202327` (noir-gris)
+- **Texte principal**: `#ffffff` (blanc pur)
+- **Texte secondaire**: `#e7e9ea` (blanc cassé)
+- **Texte muted**: `#71767b` (gris moyen)
 
-**Contenu Principal**
-- Navigation retour au dashboard
-- Titre de liste éditable ("Mes 10 films de SF préférés")
-- Description éditable
-- Liste des éléments avec boutons de suppression
-- Bouton "Ajouter un élément"
+#### Accent et interactions  
 
-**Bottom Navigation**
-- Accueil
-- Découvrir
-- MATCH !
-- Mes listes
-- Ajout rapide
+- **Primaire**: `#e11d48` (rose néon) - pour CTAs et éléments importants
+- **Bordures**: `rgba(255,255,255,0.08)` (blanc transparent)
+- **Effets de verre premium**: 
+  - Verre translucide: `rgba(255,255,255,0.05)` à `rgba(255,255,255,0.15)` avec backdrop-blur  
+  - Bordures lumineuses: `rgba(255,255,255,0.20)` à `rgba(255,255,255,0.40)`
+  - Reflets internes: `rgba(255,255,255,0.15)` à `rgba(255,255,255,0.30)`
+  - Saturation: `180%` pour intensifier les couleurs à travers le verre
 
-#### 3. Fonctionnalités Implémentées
+#### Usage des couleurs
 
-- ✅ Interface responsive (mobile-first)
-- ✅ Édition en ligne du titre et de la description
-- ✅ Navigation entre les sections (structure prête)
-- ✅ Animations et transitions fluides
-- ✅ Thème personnalisé avec couleurs Taste Match
-- ✅ Accessibilité (aria-labels, navigation clavier)
+- **Titres**: Blanc pur (`text-white`) - pas de gradients
+- **Corps de texte**: Blanc cassé (`text-tm-text`)
+- **Éléments secondaires**: Gris moyen (`text-tm-text-muted`)
+- **Accents**: Rose néon parcimonieux (`text-tm-primary`)
 
-#### 4. Architecture du Code
+#### Classes CSS spécialisées
 
-```
+- **`.tm-glass`**: Verre léger pour petits éléments
+- **`.tm-glass-card`**: Verre renforcé pour cartes principales  
+- **`.tm-glass-input`**: Optimisé pour les champs de saisie
+- **`.tm-glass-button`**: Boutons avec effets vitreux premium
+
+Ces couleurs sont configurées dans `tailwind.config.cjs` avec le préfixe `tm-` pour éviter les collisions.
+
+## 📐 Système de proportions dorées (φ ≈ 1.618)
+
+**Philosophie**: Toute l'application utilise les proportions basées sur le nombre d'or pour créer une harmonie visuelle mathématiquement parfaite.
+
+### Échelle typographique dorée
+
+- **`.phi-title`**: `2.618rem` (≈42px) - Titres principaux comme "T4ST3 M4TCH" 
+- **`.phi-subtitle`**: `1.618rem` (≈26px) - Sous-titres et titres secondaires
+- **`.phi-label`**: `0.875rem` (14px) - Labels de formulaires
+- **`.phi-description`**: `0.75rem` (12px) - Textes d'aide et descriptions
+- **Line-height**: `1.618` pour les titres, `1.414` (√2) pour l'équilibre du corps de texte
+
+### Dimensions et espacements dorés
+
+#### Conteneurs
+
+- **`.phi-container`**: `25.888rem` (≈415px) - Largeur optimale des 
+formulaires
+
+#### Éléments d'interaction  
+
+- **`.phi-input`**: Hauteur `3.236rem` (≈52px), padding `0.764rem × 1.236rem`
+- **`.phi-button`**: Hauteur `3.236rem`, padding `0.764rem × 1.618rem`  
+
+#### Cartes et surfaces
+
+- **`.phi-card`**: Padding `2.618rem` (≈42px) - Cartes principales
+- **`.phi-small-card`**: Padding `1.618rem` (≈26px) - Cartes secondaires
+
+#### Espacements systémiques
+
+- **`.phi-gap`**: `1.618rem` - Espacement principal entre sections
+- **`.phi-gap-small`**: `1rem` - Espacement secondaire  
+- **`.phi-gap-mini`**: `0.618rem` - Micro-espacements pour éléments proches
+
+### Typographie épurée
+
+- **Branding titres**: font-cinzel, toujours en blanc (`text-white`) avec classes `.phi-title/.phi-subtitle`
+- **Interface utilisateur**: font-inter, 400/600/700 (lisible, moderne)  
+- **Boutons**: font-semibold, classes `.phi-button`
+- **Labels/descriptions**: classes `.phi-label/.phi-description` avec couleurs nuancées
+
+**Règle fondamentale**: Tous les éléments respectent les proportions φ pour une harmonie visuelle optimale.
+
+Les polices sont importées dans `index.css` et les proportions dorées configurées avec classes `.phi-*`.
+
+### Ombres
+
+- Ombre: `0 10px 30px rgba(0,0,0,0.35)` (classe `shadow-lg` de Tailwind)
+
+### Composants UI
+
+- `AppHeader`: AppBar gradient sombre + blur, titre en gradient rose→bleu, slot retour et actions.
+- `AppBottomNav`: icônes outlined → filled à la sélection, fond translucide, labels visibles.
+- `Paper`/`Card`: surfaces sombres, bords nets (angles à 90°), léger gradient de surface.
+
+Ces composants sont construits avec des `div` standards et stylisés via Tailwind CSS.
+
+### Mécanismes d’interaction
+
+- Sélection bottom nav: légère élévation (`transform -translate-y-0.5`).
+- Icônes d’édition/suppression: survol avec teinte d’accent et léger scale (`hover:scale-105`).
+
+### Assets visuels
+
+- Arrière-plan: dégradés radiaux discrets rose/bleu (voir `src/index.css`).
+
+## 📦 Implémentation technique
+
+### Stack Frontend
+
+- **React 19** + **TypeScript**: Base de l'application avec typage strict
+- **Vite**: Build tool et serveur de développement rapide
+- **React Router DOM**: Navigation côté client
+- **Tailwind CSS 3.4**: Framework CSS utilitaire pour le styling
+- **Headless UI 2.2**: Composants UI accessibles sans styling (Transitions, etc.)
+- **Axios**: Client HTTP pour les appels API
+- **Clsx**: Utilitaire pour la gestion conditionnelle des classes CSS
+
+### Architecture CSS
+
+- **Design System**: Basé sur Tailwind avec palette personnalisée (tm-*)
+- **Component Pattern**: Composants réutilisables avec classes Tailwind
+- **Responsive Design**: Mobile-first avec breakpoints Tailwind
+- **Dark Theme**: Thème sombre unique avec effets de verre (backdrop-blur)
+
+### Variables CSS
+
+Définies dans `src/index.css` (`--tm-*`) pour les valeurs globales comme les gradients, qui sont ensuite utilisées dans la configuration de Tailwind.
+
+### Layout commun
+
+- Header et bottom nav factorisés:
+  - `src/components/AppHeader.tsx`
+  - `src/components/AppBottomNav.tsx`
+
+### Pages refactorées
+
+- `HomePage`, `ExplorePage`, `ListsPage`, `MatchPage`, `components/Dashboard` utilisent désormais les composants communs et le thème sombre via Tailwind.
+
+## 🧩 Guidelines d’usage
+
+### Couleurs
+
+- Utiliser les classes Tailwind: `bg-primary`, `text-secondary`, `border-tm-border`.
+- Pour les gradients ou cas spécifiques, utiliser les variables CSS: `var(--tm-gradient)`.
+
+### Styles de texte
+
+- Appliquer les classes de police et de taille de Tailwind: `font-cinzel`, `font-inter`, `text-lg`, `font-bold`.
+
+### Espacement
+
+- Utiliser les classes d'espacement de Tailwind: `p-4`, `m-2`, `gap-4`.
+- Pour le design responsive, utiliser les préfixes de Tailwind: `md:p-8`, `lg:gap-6`.
+
+### Accessibilité
+
+- Toujours renseigner `aria-label` sur les éléments interactifs sans texte (boutons avec icônes).
+- Utiliser les utilitaires `focus:` de Tailwind pour assurer des états de focus clairs.
+
+## 🚀 Démarrage
+
+1. Installer les dépendances: `npm install`
+2. Lancer le serveur de développement: `npm run dev`
+
+## 📁 Arborescence
+
 src/
-├── components/
-│   └── Dashboard.tsx     # Composant principal du dashboard
-├── App.tsx              # Point d'entrée de l'application
-├── main.tsx             # Configuration du thème et rendu
-└── index.css            # Styles globaux et animations
-```
+├── components/       # Composants réutilisables
+│   ├── AppBottomNav.tsx
+│   ├── AppHeader.tsx
+│   └── ...
+├── pages/            # Vues principales de l'application
+│   ├── HomePage.tsx
+│   └── ...
+├── context/          # Contexte React (ex: Auth, Feedback)
+├── hooks/            # Hooks personnalisés
+├── services/         # Logique métier, appels API
+├── main.tsx          # Point d'entrée de l'application
+└── index.css         # Styles globaux et variables CSS
 
-### 🎨 Design System
+## 🧪 Bonnes pratiques UI/UX
 
-**Couleurs**
+- Focus clair: header minimal, actions contextualisées.
+- Feedback immédiat: states loading/success/error visibles (géré par `UserFeedback.tsx`).
+- Gestuelle cohérente mobile: bottom nav persistante, header sticky.
 
-- Primary: `#1976d2` (Bleu Material-UI)
-- Secondary: `#dc004e` (Rose/Rouge)
-- Background: `#f5f5f5` (Gris clair)
+## 🎯 Guidelines pour l'application entière
 
-**Typographie**
+### ✅ Règles d'or obligatoires
 
-- Police: Roboto (Material Design)
-- Hiérarchie claire avec différentes tailles et poids
+#### Proportions et dimensions
 
-**Composants**
+- **TOUJOURS** utiliser les classes `.phi-*` pour toutes les dimensions
+- **Conteneurs**: `.phi-container` pour largeurs optimales
+- **Espacements**: `.phi-gap`, `.phi-gap-small`, `.phi-gap-mini` uniquement
+- **Cartes**: `.phi-card` ou `.phi-small-card` selon l'importance
 
-- AppBar avec ombre subtile
-- Paper avec coins arrondis
-- BottomNavigation avec bordure supérieure
-- Animations sur les interactions
+#### Typographie harmonieuse  
 
-### 🚀 Prochaines Étapes
+- **Titres principaux**: `.phi-title` + `font-cinzel` + `text-white`
+- **Sous-titres**: `.phi-subtitle` + `font-cinzel` + `text-tm-text`
+- **Labels**: `.phi-label` + `font-inter` + `text-tm-text`
+- **Descriptions**: `.phi-description` + `font-inter` + `text-tm-text-muted`
 
-1. **Implémentation des fonctionnalités**
-   - Système d'ajout/suppression d'éléments
-   - Navigation entre les différentes sections
-   - Intégration avec l'API backend
+#### Effets de verre systématiques
 
-2. **Pages supplémentaires**
-   - Page de connexion/inscription
-   - Page de découverte
-   - Page de matching
-   - Page d'ajout rapide
+- **Éléments principaux**: `.tm-glass-card` pour profondeur maximum
+- **Éléments secondaires**: `.tm-glass` pour légèreté
+- **Inputs/formulaires**: `.tm-glass-input` optimisé pour la saisie
+- **Boutons CTAs**: `.tm-glass-button` avec effets premium
 
-3. **Améliorations UX**
-   - Animations de transition entre les pages
-   - Feedback utilisateur (toasts, loading states)
-   - Gestion des erreurs
+### ❌ Interdictions absolues
 
-### 📱 Responsive Design
+#### Proportions et mesures
 
-L'interface est optimisée pour :
-- **Mobile** : Navigation bottom, espacement adapté
-- **Tablet** : Layout flexible
-- **Desktop** : Interface complète avec plus d'espace
+- **Jamais** de valeurs arbitraires (px, rem non-φ)
+- **Jamais** `space-y-*`, `p-*`, `m-*` classiques → Utiliser `.phi-*`
+- **Jamais** `max-w-md`, `max-w-lg` → Utiliser `.phi-container`
 
-### 🔧 Technologies Utilisées
+#### Styles visuels
 
-- **React 18** avec TypeScript
-- **Material-UI v5** (MUI)
-- **Emotion** pour les styles
-- **Vite** pour le build
-- **Roboto** pour la typographie
+- **Jamais** de gradients sur les titres → Blanc pur uniquement
+- **Jamais** de couleurs pleines → Toujours effets de verre translucides  
+- **Jamais** d'icônes décoratives au-dessus des titres
+- **Jamais** de rounded-* autre que `rounded-xl`
 
-### 🎯 Correspondance avec le Wireframe
+### 🔧 Migration des pages existantes
 
-Le dashboard implémenté correspond fidèlement au wireframe `03-dashboard.ascii` :
-- ✅ Structure identique (header, contenu, bottom nav)
-- ✅ Éléments de liste numérotés
-- ✅ Boutons d'action (éditer, supprimer, ajouter)
-- ✅ Navigation avec icônes et labels
-- ✅ Layout responsive et moderne
+#### Checklist de migration obligatoire
+
+- [ ] **Classes `.phi-*`**: Remplacer tous les espacements par proportions dorées
+- [ ] **Typographie dorée**: Convertir vers l'échelle `.phi-title/.phi-subtitle/.phi-label`
+- [ ] **Effets de verre**: Appliquer `.tm-glass-*` appropriés selon le contexte
+- [ ] **Conteneurs**: Vérifier largeurs avec `.phi-container`
+- [ ] **Interactions**: Tester focus/hover/active avec contours blancs
+- [ ] **Hiérarchie**: Valider progression visuelle harmonieuse
+- [ ] **Cohérence**: Aucun élément sans classe `.phi-*` ou `.tm-glass-*`
+
+#### Pages prioritaires à migrer
+
+1. **HomePage** - Dashboard principal avec cartes de listes
+2. **ExplorePage** - Navigation et recherche avec suggestions  
+3. **ListsPage** - Gestion des listes avec formulaires
+4. **MatchPage** - Interface de matching avec cartes interactives
+5. **QuickAddPage** - Ajout rapide avec recherche externe
+
+**Objectif final**: Cohérence visuelle parfaite sur toute l'application avec harmonie mathématique φ.
+
+### Échelle d’espacement (reco)
+
+- Utiliser l'échelle par défaut de Tailwind (multiple de 4px).
+
+### Motion (micro-interactions)
+
+- Utiliser les classes de transition de Tailwind (`duration-200`, `ease-out`).
+- Pour les animations complexes, utiliser la librairie Headless UI.
+
+### Icônes
+
+- Utiliser des composants SVG et les styliser avec les classes de Tailwind (`h-6 w-6`, `text-primary`).
+
+### Do / Don’t
+
+#### ✅ Do
+
+- **Titres**: font-cinzel en blanc pur (`text-white`)
+- **Surfaces**: Effets de verre avec backdrop-blur
+- **Accents**: Rose néon parcimonieux et stratégique
+- **Espacement**: Généreux, aéré (p-6, p-8)
+- **Bordures**: Subtiles, blanches transparentes
+
+#### ❌ Don't  
+
+- **Gradients sur les titres**: Gardez les titres en blanc simple
+- **Icônes décoratives**: Évitez les icônes au-dessus des titres
+- **Couleurs vives**: Hors palette noir/blanc/rose
+- **Arrondis excessifs**: Utilisez rounded-xl maximum
+- **Ombres lourdes**: Préférez les effets de transparence
+
+## 🗒️ Changelog UI / Thème
+
+### v2.4 (Harmonie dorée et verre premium)
+
+- **🏆 SYSTÈME DE PROPORTIONS DORÉES**: Toute l'UI basée sur φ ≈ 1.618
+- **📐 Classes `.phi-*`**: Échelle typographique et spatiale mathématiquement parfaite
+- **🪟 Effets de verre premium**: Transparence blanche, reflets, saturation 180%
+- **✨ Boutons vitreux**: `.tm-glass-button` avec gradients et interactions premium  
+- **📏 Conteneurs optimaux**: `.phi-container` pour largeurs harmonieuses
+- **🎨 Guidelines complètes**: Documentation pour migration de toute l'app
+
+### v2.3 (Design épuré noir et blanc)
+
+- **Palette révisée**: Noir et blanc épuré, sans gradients sur les titres
+- **Suppression des icônes décoratives**: Interface minimaliste et focus contenu
+- **Effets de verre opaque**: Classes `.tm-glass` et `.tm-glass-card` avec backdrop-blur
+- **Pages d'authentification**: Arrière-plans avec dégradés radiaux discrets
+- **Titres en blanc pur**: font-cinzel, `text-white`, pas de gradient
+- **Composants Headless UI**: Field, Label, Input, Button avec styling glass
+
+### v2.2 (Migration Headless UI complète)
+
+- **Migration complète vers Headless UI + Tailwind CSS**
+- Suppression totale de Material-UI (@mui/material, @mui/icons-material)
+- Architecture CSS 100% Tailwind avec design system personnalisé (tm-*)
+- Composants intégralement refactorisés : AppHeader, AppBottomNav, UserFeedback
+- Thème sombre premium avec effets de verre (backdrop-blur-xl)
+- Stack moderne : React 19, Vite, TypeScript, Headless UI 2.2, Tailwind CSS 3.4
+
+### v2.1 (néon sombre épuré)  
+
+- Stack technique migrée vers Tailwind CSS et Headless UI. Thème sombre, Inter + Cinzel, header/nav translucides, icônes outlined/filled, cards à angles nets (0px radius) et gradient léger.

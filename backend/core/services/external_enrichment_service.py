@@ -62,44 +62,62 @@ class ExternalEnrichmentService:
         return results[:limit]
     
     def get_trending_content(self, category: str = None, limit: int = 20) -> List[Dict]:
-        """Récupère le contenu tendance des APIs externes"""
+        """Récupère le contenu tendance des APIs externes avec gestion d'erreur robuste"""
         results = []
         
+        # Films via TMDB
         if not category or category == 'FILMS':
-            trending_movies = self.tmdb.get_trending_movies(limit=limit // 2 if category else limit // 4)
-            for movie in trending_movies:
-                movie['category'] = 'FILMS'
-                movie['category_display'] = 'Films'
-            results.extend(trending_movies)
+            try:
+                trending_movies = self.tmdb.get_trending_movies(limit=limit // 2 if category else limit // 4)
+                for movie in trending_movies:
+                    movie['category'] = 'FILMS'
+                    movie['category_display'] = 'Films'
+                results.extend(trending_movies)
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération des films tendance: {e}")
         
+        # Séries via TMDB
         if not category or category == 'SERIES':
-            trending_shows = self.tmdb.get_trending_tv_shows(limit=limit // 2 if category else limit // 4)
-            for show in trending_shows:
-                show['category'] = 'SERIES'
-                show['category_display'] = 'Séries'
-            results.extend(trending_shows)
+            try:
+                trending_shows = self.tmdb.get_trending_tv_shows(limit=limit // 2 if category else limit // 4)
+                for show in trending_shows:
+                    show['category'] = 'SERIES'
+                    show['category_display'] = 'Séries'
+                results.extend(trending_shows)
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération des séries tendance: {e}")
         
+        # Musique via Spotify
         if not category or category == 'MUSIQUE':
-            # Utiliser les nouvelles sorties et playlists en vedette
-            new_releases = self.spotify.get_new_releases(limit=limit // 3 if category else limit // 6)
-            featured_playlists = self.spotify.get_featured_playlists(limit=limit // 3 if category else limit // 6)
+            try:
+                # Utiliser les nouvelles sorties et playlists en vedette
+                new_releases = self.spotify.get_new_releases(limit=limit // 3 if category else limit // 6)
+                for item in new_releases:
+                    item['category'] = 'MUSIQUE'
+                    item['category_display'] = 'Musique'
+                results.extend(new_releases)
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération des nouvelles sorties Spotify: {e}")
             
-            for item in new_releases:
-                item['category'] = 'MUSIQUE'
-                item['category_display'] = 'Musique'
-            for item in featured_playlists:
-                item['category'] = 'MUSIQUE'
-                item['category_display'] = 'Musique'
-            
-            results.extend(new_releases)
-            results.extend(featured_playlists)
+            try:
+                featured_playlists = self.spotify.get_featured_playlists(limit=limit // 3 if category else limit // 6)
+                for item in featured_playlists:
+                    item['category'] = 'MUSIQUE'
+                    item['category_display'] = 'Musique'
+                results.extend(featured_playlists)
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération des playlists Spotify: {e}")
         
+        # Livres via Google Books/OpenLibrary
         if not category or category == 'LIVRES':
-            popular_books = self.books.get_popular_books(limit=limit // 2 if category else limit // 4)
-            for book in popular_books:
-                book['category'] = 'LIVRES'
-                book['category_display'] = 'Livres'
-            results.extend(popular_books)
+            try:
+                popular_books = self.books.get_popular_books(limit=limit // 2 if category else limit // 4)
+                for book in popular_books:
+                    book['category'] = 'LIVRES'
+                    book['category_display'] = 'Livres'
+                results.extend(popular_books)
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération des livres populaires: {e}")
         
         return results[:limit]
     
@@ -137,7 +155,7 @@ class ExternalEnrichmentService:
                     if item['external_id'] not in seen_ids and len(unique_results) < limit:
                         seen_ids.add(item['external_id'])
                         item['category'] = category
-                        item['category_display'] = dict(List.Category.choices)[category]
+                        item['category_display'] = dict(TasteList.Category.choices)[category]
                         unique_results.append(item)
                 
                 return unique_results

@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import Slide from '@mui/material/Slide';
-import type { AlertColor } from '@mui/material/Alert';
-import type { SlideProps } from '@mui/material/Slide';
+import React, { useState, useEffect, Fragment } from 'react';
+import { Transition } from '@headlessui/react';
+import clsx from 'clsx';
+
+// Définition des types de messages, en utilisant des chaînes de caractères simples
+export type FeedbackType = 'success' | 'error' | 'warning' | 'info';
 
 interface FeedbackMessage {
   id: string;
   message: string;
-  type: AlertColor;
+  type: FeedbackType;
   duration?: number;
 }
 
@@ -17,66 +17,82 @@ interface UserFeedbackProps {
   onClose: (id: string) => void;
 }
 
-function SlideTransition(props: SlideProps) {
-  return <Slide {...props} direction="up" />;
-}
-
 const UserFeedback: React.FC<UserFeedbackProps> = ({ message, onClose }) => {
-  const [open, setOpen] = useState(false);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (message) {
-      setOpen(true);
-      
-      // Auto-close après la durée spécifiée
+      setShow(true);
       const duration = message.duration || 4000;
       const timer = setTimeout(() => {
-        setOpen(false);
-        setTimeout(() => onClose(message.id), 300); // Attendre la transition
+        handleClose();
       }, duration);
-
       return () => clearTimeout(timer);
     }
-  }, [message, onClose]);
+  }, [message]);
 
-  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
-    if (reason === 'clickaway') {
-      return;
+  const handleClose = () => {
+    if (message) {
+      setShow(false);
+      // Laisser le temps à l'animation de se terminer avant de supprimer le message
+      setTimeout(() => {
+        onClose(message.id);
+      }, 300); // Doit correspondre à la durée de la transition
     }
-    setOpen(false);
-    setTimeout(() => onClose(message?.id || ''), 300);
   };
 
-  if (!message) return null;
+  if (!message) {
+    return null;
+  }
+
+  const alertStyles = {
+    success: 'bg-green-500 text-white',
+    error: 'bg-red-500 text-white',
+    warning: 'bg-yellow-500 text-white',
+    info: 'bg-blue-500 text-white',
+  };
 
   return (
-    <Snackbar
-      open={open}
-      autoHideDuration={message.duration || 4000}
-      onClose={handleClose}
-      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      TransitionComponent={SlideTransition}
-      sx={{
-        '& .MuiAlert-root': {
-          minWidth: { xs: '90vw', sm: 400 },
-          maxWidth: { xs: '90vw', sm: 600 }
-        }
-      }}
-    >
-      <Alert
-        onClose={handleClose}
-        severity={message.type}
-        variant="filled"
-        sx={{
-          width: '100%',
-          '& .MuiAlert-message': {
-            fontSize: { xs: '0.875rem', sm: '1rem' }
-          }
-        }}
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+      <Transition
+        show={show}
+        as={Fragment}
+        enter="transition ease-out duration-300"
+        enterFrom="transform opacity-0 scale-95 -translate-y-10"
+        enterTo="transform opacity-100 scale-100 translate-y-0"
+        leave="transition ease-in duration-300"
+        leaveFrom="transform opacity-100 scale-100 translate-y-0"
+        leaveTo="transform opacity-0 scale-95 -translate-y-10"
       >
-        {message.message}
-      </Alert>
-    </Snackbar>
+        <div
+          className={clsx(
+            'rounded-md shadow-lg p-4 flex items-center justify-between w-full',
+            alertStyles[message.type]
+          )}
+        >
+          <p className="text-sm font-medium">{message.message}</p>
+          <button
+            onClick={handleClose}
+            className="ml-4 p-1 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
+          >
+            <svg
+              className="h-5 w-5"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </Transition>
+    </div>
   );
 };
 
@@ -86,17 +102,11 @@ export const useUserFeedback = () => {
 
   const addMessage = (
     message: string,
-    type: AlertColor = 'info',
+    type: FeedbackType = 'info',
     duration?: number
   ) => {
     const id = Date.now().toString();
-    const newMessage: FeedbackMessage = {
-      id,
-      message,
-      type,
-      duration
-    };
-    
+    const newMessage: FeedbackMessage = { id, message, type, duration };
     setMessages(prev => [...prev, newMessage]);
     return id;
   };
@@ -128,7 +138,7 @@ export const useUserFeedback = () => {
     showSuccess,
     showError,
     showWarning,
-    showInfo
+    showInfo,
   };
 };
 

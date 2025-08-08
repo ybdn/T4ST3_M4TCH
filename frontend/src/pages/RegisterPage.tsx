@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Container,
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Grid,
-  Link as MuiLink,
-  Avatar,
-  Alert,
-} from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Field, Label, Input, Description, Button } from '@headlessui/react';
+import { Transition } from '@headlessui/react';
+import clsx from 'clsx';
+
 
 const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -32,109 +24,149 @@ const RegisterPage: React.FC = () => {
     }
     try {
       await register(username, email, password);
-      navigate('/'); // Redirection vers le Dashboard après inscription
-    } catch (err: any) {
-      if (err.response && err.response.data) {
-        // Essayer d'afficher un message d'erreur plus spécifique du backend
-        const errorData = err.response.data;
-        const firstErrorKey = Object.keys(errorData)[0];
-        const errorMessage = errorData[firstErrorKey][0];
-        setError(errorMessage || "Échec de l'inscription. Veuillez réessayer.");
-      } else {
-        setError("Échec de l'inscription. Une erreur inconnue est survenue.");
-      }
-      console.error(err);
+      navigate('/');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Échec de l'inscription.";
+      setError(errorMessage);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
+    <div className="min-h-screen tm-auth-bg flex items-center justify-center py-4 px-4 sm:px-6 lg:px-8 font-inter overflow-y-auto">
+      <Transition
+        appear={true}
+        show={true}
+        enter="transition-all duration-700 ease-out"
+        enterFrom="opacity-0 scale-95 translate-y-8"
+        enterTo="opacity-100 scale-100 translate-y-0"
       >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-          <LockOutlinedIcon />
-        </Avatar>
-        <Typography component="h1" variant="h5">
-          Inscription
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 3 }}>
-          {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
-          <Grid container spacing={2}>
-            <Grid xs={12}>
-              <TextField
-                required
-                fullWidth
-                id="username"
-                label="Nom d'utilisateur"
-                name="username"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </Grid>
-            <Grid xs={12}>
-              <TextField
-                required
-                fullWidth
-                id="email"
-                label="Adresse Email"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </Grid>
-            <Grid xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="password"
-                label="Mot de passe"
-                type="password"
-                id="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Grid>
-            <Grid xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="password2"
-                label="Confirmer le mot de passe"
-                type="password"
-                id="password2"
-                autoComplete="new-password"
-                value={password2}
-                onChange={(e) => setPassword2(e.target.value)}
-              />
-            </Grid>
-          </Grid>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+        <div className="phi-container w-full phi-gap">
+          {/* Header épuré avec proportions dorées */}
+          <div className="text-center">
+            <h1 className="phi-title font-bold font-cinzel text-white">
+              T4ST3 M4TCH
+            </h1>
+            <h2 className="phi-subtitle font-semibold text-tm-text">Créez votre compte</h2>
+          </div>
+          {/* Message d'erreur avec effet de verre */}
+          <Transition
+            show={!!error}
+            enter="transition-all duration-300 ease-out"
+            enterFrom="opacity-0 scale-95 translate-y-2"
+            enterTo="opacity-100 scale-100 translate-y-0"
+            leave="transition-all duration-200 ease-in"
+            leaveFrom="opacity-100 scale-100 translate-y-0"
+            leaveTo="opacity-0 scale-95 translate-y-2"
           >
-            S'inscrire
-          </Button>
-          <Grid container justifyContent="flex-end">
-            <Grid item>
-              <MuiLink component={Link} to="/login" variant="body2">
-                Déjà un compte ? Connectez-vous
-              </MuiLink>
-            </Grid>
-          </Grid>
-        </Box>
-      </Box>
-    </Container>
+            <div className="tm-glass border border-red-500/40 text-red-400 p-3 rounded-xl text-sm text-center" style={{
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 12px rgba(239, 68, 68, 0.15)'
+            }}>
+              {error}
+            </div>
+          </Transition>
+
+          {/* Formulaire principal avec effet de verre */}
+          <div className="tm-glass-card phi-card rounded-xl">
+            <form onSubmit={handleSubmit} className="phi-gap">
+              <Field>
+                <Label className="phi-label font-medium text-tm-text">Nom d'utilisateur</Label>
+                <Description className="phi-description text-tm-text-muted">Choisissez un identifiant unique.</Description>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className={clsx(
+                    'phi-input block w-full rounded-xl tm-glass-input text-sm text-tm-text placeholder:text-tm-text-muted',
+                    'focus:outline-none data-focus:ring-2 data-focus:ring-tm-primary data-focus:border-white/40 transition-all duration-200 data-focus:bg-white/12'
+                  )}
+                  placeholder="Votre nom d'utilisateur"
+                />
+              </Field>
+
+              <Field>
+                <Label className="phi-label font-medium text-tm-text">Adresse email</Label>
+                <Description className="phi-description text-tm-text-muted">Nous ne partagerons jamais votre email.</Description>
+                <Input
+                  id="email-address"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={clsx(
+                    'phi-input block w-full rounded-xl tm-glass-input text-sm text-tm-text placeholder:text-tm-text-muted',
+                    'focus:outline-none data-focus:ring-2 data-focus:ring-tm-primary data-focus:border-white/40 transition-all duration-200 data-focus:bg-white/12'
+                  )}
+                  placeholder="votre.email@exemple.com"
+                />
+              </Field>
+
+              <Field>
+                <Label className="phi-label font-medium text-tm-text">Mot de passe</Label>
+                <Description className="phi-description text-tm-text-muted">Minimum 8 caractères.</Description>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={clsx(
+                    'phi-input block w-full rounded-xl tm-glass-input text-sm text-tm-text placeholder:text-tm-text-muted',
+                    'focus:outline-none data-focus:ring-2 data-focus:ring-tm-primary data-focus:border-white/40 transition-all duration-200 data-focus:bg-white/12'
+                  )}
+                  placeholder="Votre mot de passe"
+                />
+              </Field>
+
+              <Field>
+                <Label className="phi-label font-medium text-tm-text">Confirmer le mot de passe</Label>
+                <Description className="phi-description text-tm-text-muted">Répétez le même mot de passe.</Description>
+                <Input
+                  id="password2"
+                  name="password2"
+                  type="password"
+                  required
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                  className={clsx(
+                    'phi-input block w-full rounded-xl tm-glass-input text-sm text-tm-text placeholder:text-tm-text-muted',
+                    'focus:outline-none data-focus:ring-2 data-focus:ring-tm-primary data-focus:border-white/40 transition-all duration-200 data-focus:bg-white/12'
+                  )}
+                  placeholder="Confirmer votre mot de passe"
+                />
+              </Field>
+
+              <Button
+                type="submit"
+                className="w-full tm-glass-button phi-button inline-flex items-center justify-center gap-2 rounded-xl focus:not-data-focus:outline-none data-focus:outline-2 data-focus:outline-white/50"
+              >
+                S'inscrire
+              </Button>
+            </form>
+          </div>
+          {/* Lien vers connexion avec effet de verre */}
+          <div className="tm-glass phi-small-card rounded-xl text-sm text-center" style={{
+            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 12px rgba(255, 255, 255, 0.05)'
+          }}>
+            <p className="text-tm-text-muted">
+              Déjà un compte ?{' '}
+              <Link 
+                to="/login" 
+                className="font-medium text-tm-primary hover:text-tm-primary/80 transition-colors duration-200"
+              >
+                Connectez-vous
+              </Link>
+            </p>
+          </div>
+        </div>
+      </Transition>
+    </div>
   );
 };
 

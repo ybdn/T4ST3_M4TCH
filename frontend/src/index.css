@@ -1,60 +1,267 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-tm-bg text-tm-text;
+    line-height: 1.5;
+  }
+
+  #root {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+  }
 }
 
-body {
-  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f5f5;
-}
-
-#root {
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* Améliorations pour mobile */
-@media (max-width: 600px) {
-  .MuiContainer-root {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+@layer components {
+  .tm-card {
+    @apply bg-tm-surface border border-tm-border transition-colors duration-200 hover:bg-tm-bg-elevated;
   }
   
-  .MuiPaper-root {
-    margin: 8px 0 !important;
+  .tm-button {
+    @apply px-4 py-2 font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .tm-button-primary {
+    @apply tm-button bg-tm-primary text-white hover:bg-tm-primary-700 focus:ring-tm-primary;
+  }
+  
+  .tm-button-secondary {
+    @apply tm-button bg-tm-surface text-tm-text border border-tm-border hover:bg-tm-bg-elevated focus:ring-tm-accent;
+  }
+  
+  .tm-header {
+    @apply bg-black/80 backdrop-blur-xl border-b border-tm-border;
+  }
+  
+  .tm-bottom-nav {
+    @apply bg-black/80 backdrop-blur-xl border-t border-tm-border;
+  }
+  
+  .tm-glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/20 shadow-lg;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+  
+  .tm-glass-card {
+    @apply bg-white/10 backdrop-blur-2xl border border-white/25 shadow-2xl;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: 
+      0 8px 32px 0 rgba(255, 255, 255, 0.05),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  
+  .tm-glass-input {
+    @apply backdrop-blur-md border border-white/20;
+    background-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+      0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  }
+  
+  .tm-glass-button {
+    @apply border border-white/30 font-semibold transition-all duration-200;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.15) 0%, 
+      rgba(255, 255, 255, 0.05) 100%),
+      rgba(225, 29, 72, 0.4);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 0 rgba(0, 0, 0, 0.1),
+      0 4px 20px rgba(225, 29, 72, 0.25),
+      0 1px 3px rgba(0, 0, 0, 0.3);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tm-glass-button:hover {
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.2) 0%, 
+      rgba(255, 255, 255, 0.08) 100%),
+      rgba(225, 29, 72, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 0 rgba(0, 0, 0, 0.1),
+      0 6px 25px rgba(225, 29, 72, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px) scale(1.02);
+  }
+  
+  .tm-glass-button:active {
+    transform: translateY(0) scale(1);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+      inset 0 2px 4px 0 rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(225, 29, 72, 0.2);
+  }
+  
+  .tm-auth-bg {
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(225, 29, 72, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(88, 166, 255, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(225, 29, 72, 0.1) 0%, transparent 50%),
+      #000000;
+  }
+  
+  /* Proportions basées sur le nombre d'or (φ ≈ 1.618) */
+  .phi-container {
+    max-width: 25.888rem; /* 414.4px ≈ 400 × φ */
+    @apply px-4 sm:px-6;
+  }
+  
+  @media (max-width: 375px) {
+    .phi-container {
+      max-width: calc(100vw - 2rem);
+      @apply px-2;
+    }
+  }
+  
+  .phi-title {
+    font-size: 2.618rem; /* 41.9px ≈ 26 × φ */
+    line-height: 1.618;
+    margin-bottom: 1rem; /* 16px */
+  }
+  
+  @media (max-width: 375px) {
+    .phi-title {
+      font-size: 1.8rem; /* Plus petit pour iPhone SE */
+      line-height: 1.4;
+    }
+  }
+  
+  .phi-subtitle {
+    font-size: 1.618rem; /* 25.9px ≈ 16 × φ */
+    line-height: 1.618;
+    margin-bottom: 1.618rem; /* 25.9px */
+  }
+  
+  @media (max-width: 375px) {
+    .phi-subtitle {
+      font-size: 1.2rem; /* Plus petit pour iPhone SE */
+      line-height: 1.4;
+    }
+  }
+  
+  .phi-label {
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.414; /* √2 pour équilibre */
+    margin-bottom: 0.618rem; /* 9.9px ≈ 16 / φ */
+  }
+  
+  .phi-description {
+    font-size: 0.75rem; /* 12px */
+    line-height: 1.414;
+    margin-bottom: 0.618rem; /* 9.9px */
+  }
+  
+  .phi-input {
+    height: 3.236rem; /* 51.8px ≈ 32 × φ */
+    padding: 0.764rem 1.236rem; /* 12.2px 19.8px ≈ 12×φ */
+    margin-bottom: 1.618rem; /* 25.9px */
+  }
+  
+  .phi-button {
+    height: 3.236rem; /* 51.8px ≈ 32 × φ */
+    padding: 0.764rem 1.618rem; /* 12.2px 25.9px */
+    font-size: 1rem; /* 16px base */
+    margin-bottom: 1.618rem; /* 25.9px */
+  }
+  
+  .phi-card {
+    padding: 2.618rem; /* 41.9px ≈ 26 × φ */
+    margin-bottom: 1.618rem; /* 25.9px */
+  }
+  
+  @media (max-width: 375px) {
+    .phi-card {
+      padding: 1.5rem; /* Moins d'espace sur iPhone SE */
+      margin-bottom: 1rem;
+    }
+  }
+  
+  .phi-small-card {
+    padding: 1.618rem; /* 25.9px ≈ 16 × φ */
+  }
+  
+  .phi-gap {
+    gap: 1.618rem; /* 25.9px pour espacement principal */
+  }
+  
+  .phi-gap-small {
+    gap: 1rem; /* 16px pour espacement secondaire */
+  }
+  
+  .phi-gap-mini {
+    gap: 0.618rem; /* 9.9px pour micro-espacement */
+  }
+
+  /* Améliorations spécifiques pour iPhone SE et petits écrans */
+  @media (max-width: 375px) {
+    .phi-input {
+      height: 2.5rem; /* Plus petit sur mobile */
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .phi-button {
+      height: 2.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .phi-gap {
+      gap: 1rem; /* Espacement réduit sur mobile */
+    }
+    
+    .tm-glass-card {
+      box-shadow: 
+        0 4px 16px 0 rgba(255, 255, 255, 0.05),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  /* Breakpoint pour très petits écrans */
+  @media (max-width: 320px) {
+    .phi-container {
+      max-width: calc(100vw - 1rem);
+      @apply px-2;
+    }
+    
+    .phi-card {
+      padding: 1rem;
+    }
+  }
+
+  /* Cache la scrollbar pour le carrousel */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE et Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari et Opera */
   }
 }
-
-/* Animation pour les transitions */
-.MuiBottomNavigation-root .MuiBottomNavigationAction-root {
-  transition: all 0.2s ease-in-out;
-}
-
-.MuiBottomNavigation-root .MuiBottomNavigationAction-root.Mui-selected {
-  transform: translateY(-2px);
-}
-
-/* Style pour les icônes de suppression */
-.MuiListItemSecondaryAction-root .MuiIconButton-root {
-  color: #d32f2f;
-  transition: all 0.2s ease-in-out;
-}
-
-.MuiListItemSecondaryAction-root .MuiIconButton-root:hover {
-  background-color: rgba(211, 47, 47, 0.1);
-  transform: scale(1.1);
-}
-
-/* Style pour les boutons d'édition */
-.MuiIconButton-root[aria-label="edit"] {
-  color: #1976d2;
-  transition: all 0.2s ease-in-out;
-}
-
-.MuiIconButton-root[aria-label="edit"]:hover {
-  background-color: rgba(25, 118, 210, 0.1);
-  transform: scale(1.1);
-} 

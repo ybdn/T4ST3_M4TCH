@@ -10,9 +10,6 @@ COPY ./frontend/package.json ./frontend/package-lock.json* ./
 # Installer les dépendances
 RUN npm install
 
-# Copier le code source de l'application
-COPY ./frontend /app/
-
 # Exposer le port de développement
 EXPOSE 3000
 

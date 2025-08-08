@@ -8,7 +8,8 @@ import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
 import MatchPage from './pages/MatchPage';
 import QuickAddPage from './pages/QuickAddPage';
-import PrivateRoute from './components/PrivateRoute';
+import ProfilePage from './pages/ProfilePage';
+import PrivateRoute from './components/PrivateRoute.tsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import UserFeedback, { useUserFeedback } from './components/UserFeedback';
 import { FeedbackProvider } from './context/FeedbackContext';
@@ -18,7 +19,8 @@ function AppContent() {
   const navigate = useNavigate();
   const { messages, removeMessage } = useUserFeedback();
 
-  const handleNavigate = (section: string, params?: any) => {
+  type NavigateParams = { listId?: number } | undefined;
+  const handleNavigate = (section: string, params?: NavigateParams) => {
     switch (section) {
       case 'accueil':
         navigate('/');
@@ -35,10 +37,14 @@ function AppContent() {
       case 'ajout':
         navigate('/quick-add');
         break;
-      case 'dashboard':
-        const listId = params?.listId || 1;
+      case 'profil':
+        navigate('/profile');
+        break;
+      case 'dashboard': {
+        const listId = params?.listId ?? 1;
         navigate(`/dashboard/${listId}`);
         break;
+      }
       default:
         console.log(`Navigation vers: ${section}`, params);
     }
@@ -86,6 +92,14 @@ function AppContent() {
           element={
             <PrivateRoute>
               <QuickAddPage onNavigate={handleNavigate} />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <PrivateRoute>
+              <ProfilePage onNavigate={handleNavigate} />
             </PrivateRoute>
           }
         />

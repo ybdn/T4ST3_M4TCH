@@ -1,250 +1,148 @@
 import React, { useState } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Box,
-  Container,
-  Paper,
-  Button,
-  Card,
-  CardContent,
-  LinearProgress,
-  BottomNavigation,
-  BottomNavigationAction,
-  Avatar,
-  Chip
-} from '@mui/material';
-import {
-  Notifications as NotificationsIcon,
-  AccountCircle as AccountCircleIcon,
-  Home as HomeIcon,
-  Explore as ExploreIcon,
-  Favorite as FavoriteIcon,
-  List as ListIcon,
-  Add as AddIcon,
-  ThumbUp as ThumbUpIcon,
-  ThumbDown as ThumbDownIcon,
-  Refresh as RefreshIcon
-} from '@mui/icons-material';
+import AppHeader from '../components/AppHeader';
+import AppBottomNav from '../components/AppBottomNav';
+import clsx from 'clsx';
+
+// --- Icônes SVG ---
+const ThumbUpIcon = ({ className }: { className?: string }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24" strokeWidth={0}><path d="M2 20h2c.55 0 1-.45 1-1v-9c0-.55-.45-1-1-1H2v11zm19.83-7.12c.11-.25.17-.52.17-.8V8c0-1.1-.9-2-2-2h-4.26l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 0 7.58 6.59C7.22 6.95 7 7.45 7 8v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05z" /></svg> );
+const ThumbDownIcon = ({ className }: { className?: string }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24" strokeWidth={0}><path d="M22 4h-2c-.55 0-1 .45-1 1v9c0 .55.45 1 1 1h2V4zM2.17 11.12c-.11.25-.17.52-.17.8V16c0 1.1.9 2 2 2h4.26l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 24l6.59-6.59C16.78 17.05 17 16.55 17 16V6c0-1.1-.9-2-2-2H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05z" /></svg> );
+const RefreshIcon = ({ className }: { className?: string }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120.5 15M20 20l-1.5-1.5A9 9 0 003.5 9" /></svg> );
+
+// --- Interfaces ---
+interface MatchItem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  compatibilityScore: number;
+  reasons: string[];
+}
 
 interface MatchPageProps {
   onNavigate?: (section: string) => void;
 }
 
 const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
-  const [bottomNavValue, setBottomNavValue] = useState(2); // "MATCH !" selected
+  const [bottomNavValue, setBottomNavValue] = useState(2); // Match est à l'index 2
   const [currentMatch, setCurrentMatch] = useState(0);
-  const [matches, setMatches] = useState([
+  
+  // Données d'exemple pour les matchs
+  const matches: MatchItem[] = [
     {
-      id: 1,
-      title: "Blade Runner 2049",
-      category: "Film",
-      description: "Chef-d'œuvre de science-fiction de Denis Villeneuve",
+      id: '1',
+      title: 'Blade Runner 2049',
+      description: 'Un chef-d\'œuvre visuel de science-fiction qui explore l\'humanité.',
+      category: 'Films',
       compatibilityScore: 92,
-      commonFriends: ["Alice", "Bob"],
-      reasons: ["Sci-fi", "Visuel époustouflant", "Histoire profonde"]
+      reasons: ['Sci-Fi', 'Visuel époustouflant', 'Philosophique']
     },
     {
-      id: 2, 
-      title: "Radiohead",
-      category: "Musique",
-      description: "Groupe de rock alternatif britannique",
+      id: '2',
+      title: 'Stranger Things',
+      description: 'Une série nostalgique qui mélange horreur et aventure.',
+      category: 'Séries',
       compatibilityScore: 87,
-      commonFriends: ["Charlie", "David"],
-      reasons: ["Rock alternatif", "Expérimental", "OK Computer"]
+      reasons: ['Nostalgique', 'Mystère', 'Personnages attachants']
     },
     {
-      id: 3,
-      title: "1984",
-      category: "Livre", 
-      description: "Roman dystopique de George Orwell",
+      id: '3',
+      title: 'Bohemian Rhapsody',
+      description: 'L\'histoire captivante du groupe Queen et de Freddie Mercury.',
+      category: 'Musique',
       compatibilityScore: 95,
-      commonFriends: ["Eve", "Frank", "Grace"],
-      reasons: ["Dystopie", "Politique", "Classique"]
+      reasons: ['Rock classique', 'Biopic', 'Performance épique']
     }
-  ]);
+  ];
 
-  const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
+  const currentItem = matches[currentMatch] || matches[0];
+
+  const handleBottomNavChange = (_event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
-    const sections = ['accueil', 'decouvrir', 'match', 'listes', 'ajout'];
+    const sections = ['accueil', 'decouvrir', 'match', 'listes', 'profil'];
     onNavigate?.(sections[newValue]);
   };
 
   const handleLike = () => {
-    console.log(`J'aime: ${matches[currentMatch].title}`);
-    nextMatch();
-  };
-
-  const handleDislike = () => {
-    console.log(`Je n'aime pas: ${matches[currentMatch].title}`);
-    nextMatch();
-  };
-
-  const nextMatch = () => {
     if (currentMatch < matches.length - 1) {
       setCurrentMatch(currentMatch + 1);
     } else {
-      // Remettre à zéro ou charger de nouveaux matches
-      setCurrentMatch(0);
+      // Fin des matchs
+      console.log('Tous les matchs terminés !');
     }
   };
 
-  const currentItem = matches[currentMatch];
+  const handleDislike = () => {
+    if (currentMatch < matches.length - 1) {
+      setCurrentMatch(currentMatch + 1);
+    } else {
+      // Fin des matchs
+      console.log('Tous les matchs terminés !');
+    }
+  };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Header */}
-      <AppBar position="static" sx={{ backgroundColor: '#dc004e' }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            MATCH !
-          </Typography>
-          <IconButton color="inherit" size="large" aria-label="notifications">
-            <NotificationsIcon />
-          </IconButton>
-          <IconButton color="inherit" size="large" aria-label="profile">
-            <AccountCircleIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+    <div className="min-h-screen tm-auth-bg font-inter">
+      <AppHeader title="T4ST3 M4TCH" />
 
-      {/* Contenu principal */}
-      <Container sx={{ flexGrow: 1, py: 2, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-        {/* Barre de progression */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Match {currentMatch + 1} sur {matches.length}
-          </Typography>
-          <LinearProgress 
-            variant="determinate" 
-            value={((currentMatch + 1) / matches.length) * 100} 
-            sx={{ height: 8, borderRadius: 4 }}
-          />
-        </Box>
+      <div className="h-[calc(100vh-9rem)] flex flex-col px-4 sm:px-6 lg:px-8">
+        
+        {/* Card de match - centrée et sans scroll */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-sm tm-glass-card rounded-xl p-6 text-center">
+            
+            {/* Score de compatibilité */}
+            <div className="mb-4">
+              <p className="text-5xl font-bold text-tm-primary mb-1">{currentItem.compatibilityScore}%</p>
+              <p className="text-xs text-tm-text-muted">Compatibilité</p>
+            </div>
+            
+            {/* Badge catégorie */}
+            <span className="inline-block px-3 py-1 text-xs font-semibold bg-tm-primary/20 text-tm-primary rounded-full mb-4">
+              {currentItem.category}
+            </span>
+            
+            {/* Titre */}
+            <h1 className="text-xl font-bold font-cinzel text-white mb-3">{currentItem.title}</h1>
+            
+            {/* Description */}
+            <p className="text-sm text-tm-text-muted mb-4 leading-relaxed line-clamp-3">{currentItem.description}</p>
+            
+            {/* Raisons du match */}
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-tm-text mb-2">Pourquoi ce match ?</h2>
+              <div className="flex flex-wrap justify-center gap-1">
+                {currentItem.reasons.map(reason => (
+                  <span key={reason} className="px-2 py-1 text-xs tm-glass rounded-full text-tm-text-muted">
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-        {/* Carte de match principale */}
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Card sx={{ 
-            width: '100%', 
-            maxWidth: 400, 
-            minHeight: 500,
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: 4
-          }}>
-            <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
-              {/* Score de compatibilité */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="h3" component="div" color="primary" fontWeight="bold">
-                  {currentItem.compatibilityScore}%
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Compatibilité
-                </Typography>
-              </Box>
-
-              {/* Catégorie */}
-              <Chip 
-                label={currentItem.category} 
-                color="secondary" 
-                sx={{ mb: 2 }}
-              />
-
-              {/* Titre */}
-              <Typography variant="h4" component="h1" gutterBottom>
-                {currentItem.title}
-              </Typography>
-
-              {/* Description */}
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                {currentItem.description}
-              </Typography>
-
-              {/* Raisons du match */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Pourquoi ce match ?
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {currentItem.reasons.map((reason) => (
-                    <Chip key={reason} label={reason} variant="outlined" size="small" />
-                  ))}
-                </Box>
-              </Box>
-
-              {/* Amis en commun */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Aimé par vos amis :
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  {currentItem.commonFriends.map((friend) => (
-                    <Avatar key={friend} sx={{ width: 32, height: 32, fontSize: '0.8rem' }}>
-                      {friend[0]}
-                    </Avatar>
-                  ))}
-                </Box>
-              </Box>
-            </CardContent>
-
-            {/* Actions */}
-            <Box sx={{ p: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
-              <Button
-                variant="contained"
-                color="error"
-                size="large"
-                startIcon={<ThumbDownIcon />}
-                onClick={handleDislike}
-                sx={{ minWidth: 120 }}
+            {/* Boutons d'action */}
+            <div className="flex gap-6 justify-center">
+              <button 
+                onClick={handleDislike} 
+                className="w-16 h-16 flex items-center justify-center bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/30 hover:scale-110 transition-all duration-200"
               >
-                Non merci
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                size="large"
-                startIcon={<ThumbUpIcon />}
-                onClick={handleLike}
-                sx={{ minWidth: 120 }}
+                <ThumbDownIcon className="h-7 w-7" />
+              </button>
+              <button 
+                onClick={handleLike} 
+                className="w-16 h-16 flex items-center justify-center bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30 hover:scale-110 transition-all duration-200"
               >
-                J'adore !
-              </Button>
-            </Box>
-          </Card>
-        </Box>
+                <ThumbUpIcon className="h-7 w-7" />
+              </button>
+            </div>
+          </div>
+        </div>
 
-        {/* Bouton pour relancer */}
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => setCurrentMatch(0)}
-          >
-            Recommencer les matchs
-          </Button>
-        </Box>
-      </Container>
+        {/* Espace pour la navbar */}
+        <div className="pb-2"></div>
+      </div>
 
-      {/* Bottom Navigation */}
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-        <BottomNavigation
-          value={bottomNavValue}
-          onChange={handleBottomNavChange}
-          showLabels
-        >
-          <BottomNavigationAction label="Accueil" icon={<HomeIcon />} />
-          <BottomNavigationAction label="Découvrir" icon={<ExploreIcon />} />
-          <BottomNavigationAction label="MATCH !" icon={<FavoriteIcon />} />
-          <BottomNavigationAction label="Mes listes" icon={<ListIcon />} />
-          <BottomNavigationAction label="Ajout rapide" icon={<AddIcon />} />
-        </BottomNavigation>
-      </Paper>
-
-      {/* Espace pour éviter que le contenu soit caché par la bottom navigation */}
-      <Box sx={{ height: 56 }} />
-    </Box>
+      <AppBottomNav value={bottomNavValue} onChange={handleBottomNavChange} />
+    </div>
   );
 };
 

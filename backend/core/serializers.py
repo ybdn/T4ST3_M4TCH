@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem
+from .models import List, ListItem, ExternalReference
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -35,9 +35,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class ListItemSerializer(serializers.ModelSerializer):
+    external_ref = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = ListItem
-        fields = ('id', 'title', 'description', 'position', 'list', 'created_at', 'updated_at')
+        fields = ('id', 'title', 'description', 'position', 'list', 'created_at', 'updated_at', 'external_ref')
         read_only_fields = ('id', 'created_at', 'updated_at')
     
     def __init__(self, *args, **kwargs):
@@ -48,6 +49,19 @@ class ListItemSerializer(serializers.ModelSerializer):
             url_name = request.resolver_match.url_name
             if url_name and 'list-items' in url_name:
                 self.fields.pop('list', None)
+
+    def get_external_ref(self, obj):
+        external = getattr(obj, 'external_ref', None)
+        if not external:
+            return None
+        return {
+            'source': external.external_source,
+            'poster_url': external.poster_url,
+            'backdrop_url': external.backdrop_url,
+            'rating': external.rating,
+            'release_date': external.release_date,
+            'metadata': external.metadata,
+        }
 
 
 class ListSerializer(serializers.ModelSerializer):

@@ -1,34 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Box,
-  Container,
-  Paper,
-  BottomNavigation,
-  BottomNavigationAction,
-  Card,
-  CardContent,
-  CardActionArea,
-  Alert,
-  CircularProgress
-} from '@mui/material';
-import {
-  Notifications as NotificationsIcon,
-  AccountCircle as AccountCircleIcon,
-  Home as HomeIcon,
-  Explore as ExploreIcon,
-  Favorite as FavoriteIcon,
-  List as ListIcon,
-  Add as AddIcon,
-  Movie as MovieIcon,
-  Tv as TvIcon,
-  MusicNote as MusicIcon,
-  MenuBook as BookIcon
-} from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import { FilmIcon, SeriesIcon, MusicIcon, BookIcon } from '../components/icons';
+import { useAuth } from '../context/AuthContext.tsx';
+import AppHeader from '../components/AppHeader';
+import AppBottomNav from '../components/AppBottomNav';
 
 interface TasteList {
   id: number;
@@ -61,7 +35,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
 
   const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
-    const sections = ['accueil', 'decouvrir', 'match', 'listes', 'ajout'];
+    const sections = ['accueil', 'decouvrir', 'match', 'listes', 'profil'];
     onNavigate?.(sections[newValue]);
   };
 
@@ -103,214 +77,106 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const getCategoryConfig = (category: string) => {
     const configs = {
       'FILMS': {
-        icon: MovieIcon,
-        color: '#e53e3e',
-        bgColor: '#fef5f5'
+        icon: FilmIcon,
+        color: '#ffffff'
       },
       'SERIES': {
-        icon: TvIcon,
-        color: '#3182ce',
-        bgColor: '#f0f8ff'
+        icon: SeriesIcon,
+        color: '#ffffff'
       },
       'MUSIQUE': {
         icon: MusicIcon,
-        color: '#38a169',
-        bgColor: '#f0fff4'
+        color: '#ffffff'
       },
       'LIVRES': {
         icon: BookIcon,
-        color: '#d69e2e',
-        bgColor: '#fffbeb'
+        color: '#ffffff'
       }
     };
     return configs[category as keyof typeof configs] || configs['FILMS'];
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Header */}
-      <AppBar position="static" sx={{ backgroundColor: '#4caf50' }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Mes Listes
-          </Typography>
-          <IconButton color="inherit" size="large" aria-label="notifications">
-            <NotificationsIcon />
-          </IconButton>
-          <IconButton color="inherit" size="large" aria-label="profile">
-            <AccountCircleIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+    <div className="flex flex-col h-screen">
+      <AppHeader title="T4ST3 M4TCH" />
 
       {/* Contenu principal */}
-      <Container 
-        maxWidth="md" 
-        sx={{ 
-          flexGrow: 1, 
-          py: 2, 
-          px: 2, 
-          overflow: 'auto',
-          pb: 9 // Espace pour la bottom navigation
-        }}
-      >
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            gutterBottom
-            sx={{ 
-              fontSize: { xs: '1.5rem', sm: '2.125rem' },
-              fontWeight: 'bold',
-              mb: 3,
-              textAlign: 'center'
-            }}
-          >
-            Mes Collections
-          </Typography>
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto py-6 px-4 sm:py-8 sm:px-6">
+          {/* Header épuré */}
+          <div className="mb-12">
+            <h1 className="text-3xl sm:text-5xl font-bold text-tm-text mb-2">
+              Mes listes
+            </h1>
+            <p className="text-base text-tm-text-muted leading-relaxed">
+              Gérez vos listes culturelles
+            </p>
+          </div>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <div className="mb-8 p-4 bg-red-900/20 border border-red-800 text-red-300 rounded-none">
               {error}
-            </Alert>
+            </div>
           )}
 
           {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
+            <div className="flex justify-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tm-accent"></div>
+            </div>
           ) : (
-            <Box sx={{ 
-              display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)' },
-              gap: 2
-            }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {Object.entries(categories).map(([categoryKey, categoryData]) => {
                 const config = getCategoryConfig(categoryKey);
                 const IconComponent = config.icon;
                 const list = categoryData.list;
                 
                 return (
-                  <Card 
+                  <button
                     key={categoryKey}
-                    sx={{ 
-                      height: '100%',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 6
-                      }
-                    }}
+                    onClick={() => list && handleCategoryClick(list.id, categoryKey)}
+                    className="tm-card p-6 text-left hover:bg-tm-bg-elevated transition-colors cursor-pointer"
                   >
-                    <CardActionArea
-                      sx={{ height: '100%' }}
-                      onClick={() => list && handleCategoryClick(list.id, categoryKey)}
-                    >
-                      <CardContent sx={{ p: { xs: 2, sm: 3 }, backgroundColor: config.bgColor }}>
-                        {/* Mobile: Layout vertical, Desktop: Layout horizontal */}
-                        <Box sx={{ 
-                          display: 'flex', 
-                          flexDirection: { xs: 'column', sm: 'row' },
-                          alignItems: { xs: 'center', sm: 'flex-start' },
-                          mb: 2 
-                        }}>
-                          <Box
-                            sx={{
-                              width: { xs: 40, sm: 48 },
-                              height: { xs: 40, sm: 48 },
-                              borderRadius: '50%',
-                              backgroundColor: config.color,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: { xs: 0, sm: 2 },
-                              mb: { xs: 1, sm: 0 }
-                            }}
-                          >
-                            <IconComponent sx={{ color: 'white', fontSize: { xs: 20, sm: 24 } }} />
-                          </Box>
-                          <Typography 
-                            variant="h6" 
-                            component="h2" 
-                            color={config.color}
-                            sx={{ 
-                              fontSize: { xs: '0.9rem', sm: '1.25rem' },
-                              textAlign: { xs: 'center', sm: 'left' },
-                              fontWeight: 'medium'
-                            }}
-                          >
-                            {categoryData.category_label}
-                          </Typography>
-                        </Box>
-                        
-                        <Typography 
-                          variant="h4" 
-                          sx={{ 
-                            mb: 1, 
-                            color: config.color, 
-                            fontWeight: 'bold',
-                            fontSize: { xs: '1.5rem', sm: '2.125rem' },
-                            textAlign: { xs: 'center', sm: 'left' }
-                          }}
-                        >
-                          {list?.items_count || 0}
-                        </Typography>
-                        
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary" 
-                          sx={{ 
-                            mb: { xs: 1, sm: 2 },
-                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                            textAlign: { xs: 'center', sm: 'left' }
-                          }}
-                        >
-                          {list?.items_count === 0 
-                            ? 'Aucun élément'
-                            : list?.items_count === 1 
-                              ? '1 élément' 
-                              : `${list?.items_count} éléments`
-                          }
-                        </Typography>
+                    {/* Header avec icône et titre */}
+                    <div className="flex items-center mb-6">
+                      <IconComponent size={32} color="#e7e9ea" />
+                      <h2 className="ml-3 text-lg font-semibold text-tm-text">
+                        {categoryData.category_label}
+                      </h2>
+                    </div>
+                    
+                    {/* Statistiques */}
+                    <div className="mb-4">
+                      <div className="text-3xl font-bold mb-1" style={{ color: config.color }}>
+                        {list?.items_count || 0}
+                      </div>
+                      
+                      <div className="text-sm text-tm-text-muted">
+                        {list?.items_count === 0 
+                          ? 'Aucun élément'
+                          : list?.items_count === 1 
+                            ? '1 élément' 
+                            : `${list?.items_count} éléments`
+                        }
+                      </div>
+                    </div>
 
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontStyle: 'italic', 
-                            color: 'text.secondary',
-                            fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                            textAlign: { xs: 'center', sm: 'left' },
-                            display: { xs: 'none', sm: 'block' } // Masquer sur mobile pour économiser l'espace
-                          }}
-                        >
-                          {list?.description || 'Cliquez pour gérer cette collection'}
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
+                    {/* Description */}
+                    <p className="text-sm text-tm-text-muted leading-relaxed">
+                      {list?.description || 'Cliquez pour gérer cette collection'}
+                    </p>
+                  </button>
                 );
               })}
-            </Box>
+            </div>
           )}
-        </Paper>
-      </Container>
+        </div>
+      </div>
 
-      {/* Bottom Navigation */}
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-        <BottomNavigation
-          value={bottomNavValue}
-          onChange={handleBottomNavChange}
-          showLabels
-        >
-          <BottomNavigationAction label="Accueil" icon={<HomeIcon />} />
-          <BottomNavigationAction label="Découvrir" icon={<ExploreIcon />} />
-          <BottomNavigationAction label="MATCH !" icon={<FavoriteIcon />} />
-          <BottomNavigationAction label="Mes listes" icon={<ListIcon />} />
-          <BottomNavigationAction label="Ajout rapide" icon={<AddIcon />} />
-        </BottomNavigation>
-      </Paper>
+      <AppBottomNav value={bottomNavValue} onChange={handleBottomNavChange} />
 
-    </Box>
+      {/* Espace pour éviter que le contenu soit caché par la bottom navigation */}
+      <div className="h-14"></div>
+    </div>
   );
 };
 

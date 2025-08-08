@@ -1,6 +1,6 @@
 """
-Service pour l'intégration avec les APIs de livres
-Combine OpenLibrary et Google Books pour enrichissement maximal
+Service pour l'intégration avec Google Books API
+Utilise exclusivement Google Books pour les recherches et données de livres
 """
 
 import requests
@@ -14,9 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class BooksService:
-    """Service pour les APIs de livres (OpenLibrary + Google Books)"""
+    """Service pour Google Books API"""
     
-    OPENLIBRARY_BASE_URL = "https://openlibrary.org"
     GOOGLE_BOOKS_BASE_URL = "https://www.googleapis.com/books/v1"
     
     def __init__(self):
@@ -24,13 +23,13 @@ class BooksService:
         if not self.google_api_key:
             logger.warning("GOOGLE_BOOKS_API_KEY not configured, using basic access")
     
-    def _make_request(self, url: str, params: Dict = None, service: str = "openlibrary") -> Optional[Dict]:
+    def _make_request(self, url: str, params: Dict = None) -> Optional[Dict]:
         """Effectue une requête avec gestion d'erreur et cache"""
         if params is None:
             params = {}
         
         # Clé de cache
-        cache_key = f"books_{service}_{hashlib.md5(f'{url}_{str(params)}'.encode()).hexdigest()}"
+        cache_key = f"google_books_{hashlib.md5(f'{url}_{str(params)}'.encode()).hexdigest()}"
         
         # Vérifier le cache
         cached_data = APICache.get_cached_data(cache_key)
@@ -49,115 +48,63 @@ class BooksService:
             return data
             
         except requests.RequestException as e:
-            logger.error(f"{service} API error for {url}: {e}")
+            logger.error(f"Google Books API error for {url}: {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error with {service} API: {e}")
+            logger.error(f"Unexpected error with Google Books API: {e}")
             return None
     
     def search_books(self, query: str, limit: int = 10) -> List[Dict]:
-        """Recherche de livres combinant OpenLibrary et Google Books"""
-        results = []
-        
-        # Rechercher sur OpenLibrary d'abord
-        ol_results = self._search_openlibrary(query, limit // 2)
-        results.extend(ol_results)
-        
-        # Compléter avec Google Books
-        remaining = limit - len(results)
-        if remaining > 0:
-            gb_results = self._search_google_books(query, remaining)
-            results.extend(gb_results)
-        
-        # Dédupliquer par titre (approximatif)
-        seen_titles = set()
-        unique_results = []
-        for book in results:
-            title_key = book['title'].lower().strip()
-            if title_key not in seen_titles and title_key:
-                seen_titles.add(title_key)
-                unique_results.append(book)
-        
-        return unique_results[:limit]
+        """Recherche de livres via Google Books API"""
+        return self._search_google_books(query, limit)
     
     def get_popular_books(self, limit: int = 20) -> List[Dict]:
-        """Récupère des livres populaires (basé sur des listes prédéfinies)"""
-        popular_books = [
-            {
-                'title': 'Le Seigneur des Anneaux',
-                'author': 'J.R.R. Tolkien',
-                'description': 'Épopée fantasy classique',
-                'isbn': '9782070612880',
-                'source': 'openlibrary'
-            },
-            {
-                'title': '1984',
-                'author': 'George Orwell',
-                'description': 'Roman dystopique',
-                'isbn': '9782070368228',
-                'source': 'openlibrary'
-            },
-            {
-                'title': 'Harry Potter à l\'école des sorciers',
-                'author': 'J.K. Rowling',
-                'description': 'Premier tome de la série Harry Potter',
-                'isbn': '9782070541270',
-                'source': 'openlibrary'
-            },
-            {
-                'title': 'L\'Étranger',
-                'author': 'Albert Camus',
-                'description': 'Roman philosophique',
-                'isbn': '9782070360024',
-                'source': 'openlibrary'
-            },
-            {
-                'title': 'Le Petit Prince',
-                'author': 'Antoine de Saint-Exupéry',
-                'description': 'Conte philosophique',
-                'isbn': '9782070612758',
-                'source': 'openlibrary'
-            }
+        """Récupère des livres populaires via Google Books API"""
+        popular_queries = [
+            'Le Seigneur des Anneaux Tolkien',
+            '1984 George Orwell',
+            'Harry Potter école sorciers Rowling',
+            'Le Petit Prince Saint-Exupéry',
+            'L\'Étranger Albert Camus',
+            'Dune Frank Herbert',
+            'Les Misérables Victor Hugo',
+            'Germinal Émile Zola',
+            'Pride and Prejudice Jane Austen',
+            'To Kill a Mockingbird Harper Lee'
         ]
         
         results = []
-        for book in popular_books[:limit]:
-            results.append(self._format_book(book))
         
-        return results
+        # Rechercher chaque livre populaire dans Google Books
+        for query in popular_queries:
+            try:
+                gb_results = self._search_google_books(query, 1)
+                if gb_results:
+                    results.extend(gb_results)
+                    
+                # Arrêter si on a assez de résultats
+                if len(results) >= limit:
+                    break
+                    
+            except Exception as e:
+                logger.error(f"Erreur lors de la recherche du livre populaire '{query}': {e}")
+                continue
+        
+        return results[:limit]
     
     def get_books_by_author(self, author: str, limit: int = 10) -> List[Dict]:
-        """Récupère les livres d'un auteur"""
-        # Recherche par nom d'auteur
-        query = f"author:{author}"
-        return self.search_books(query, limit)
+        """Récupère les livres d'un auteur via Google Books"""
+        query = f"inauthor:{author}"
+        return self._search_google_books(query, limit)
     
     def get_books_by_genre(self, genre: str, limit: int = 10) -> List[Dict]:
-        """Récupère les livres d'un genre"""
-        # Recherche par genre
+        """Récupère les livres d'un genre via Google Books"""
         query = f"subject:{genre}"
-        return self.search_books(query, limit)
+        return self._search_google_books(query, limit)
     
-    def _search_openlibrary(self, query: str, limit: int = 10) -> List[Dict]:
-        """Recherche spécifique sur OpenLibrary"""
-        url = f"{self.OPENLIBRARY_BASE_URL}/search.json"
-        params = {
-            'q': query,
-            'limit': limit,
-            'fields': 'key,title,author_name,first_publish_year,isbn,cover_i,publisher,subject,language,number_of_pages_median'
-        }
-        
-        data = self._make_request(url, params, "openlibrary")
-        if not data:
-            return []
-        
-        results = []
-        for book in data.get('docs', []):
-            formatted = self._format_openlibrary_book(book)
-            if formatted:
-                results.append(formatted)
-        
-        return results
+    def get_book_details_by_isbn(self, isbn: str) -> Optional[Dict]:
+        """Récupère les détails d'un livre via ISBN avec Google Books"""
+        return self._get_google_book_by_isbn(isbn)
     
     def _search_google_books(self, query: str, limit: int = 10) -> List[Dict]:
         """Recherche spécifique sur Google Books"""
@@ -172,7 +119,7 @@ class BooksService:
         if self.google_api_key:
             params['key'] = self.google_api_key
         
-        data = self._make_request(url, params, "google_books")
+        data = self._make_request(url, params)
         if not data:
             return []
         
@@ -184,25 +131,41 @@ class BooksService:
         
         return results
     
-    def get_book_details_by_isbn(self, isbn: str) -> Optional[Dict]:
-        """Récupère les détails d'un livre via ISBN"""
-        # Essayer OpenLibrary d'abord
-        ol_result = self._get_openlibrary_by_isbn(isbn)
-        if ol_result:
-            return ol_result
+    def _get_high_quality_cover_url(self, image_links: Dict) -> Optional[str]:
+        """Récupère l'URL de couverture en haute qualité en optimisant le paramètre zoom"""
+        if not image_links:
+            return None
         
-        # Essayer Google Books
-        gb_result = self._get_google_book_by_isbn(isbn)
-        return gb_result
-    
-    def _get_openlibrary_by_isbn(self, isbn: str) -> Optional[Dict]:
-        """Récupère un livre d'OpenLibrary par ISBN"""
-        url = f"{self.OPENLIBRARY_BASE_URL}/isbn/{isbn}.json"
-        data = self._make_request(url, service="openlibrary")
+        # Priorités des formats d'image (du meilleur au moins bon)
+        priority_order = ['large', 'medium', 'small', 'thumbnail']
         
-        if data:
-            return self._format_openlibrary_book_details(data)
-        return None
+        cover_url = None
+        for format_type in priority_order:
+            if format_type in image_links:
+                cover_url = image_links[format_type]
+                break
+        
+        if not cover_url:
+            return None
+        
+        # Convertir en HTTPS si nécessaire
+        if cover_url.startswith('http://'):
+            cover_url = cover_url.replace('http://', 'https://')
+        
+        # Optimiser le paramètre zoom pour la meilleure qualité
+        if 'books.google.com' in cover_url and 'zoom=' in cover_url:
+            # Essayer d'abord zoom=0 pour la plus haute résolution
+            high_quality_url = cover_url.replace('zoom=1', 'zoom=0').replace('zoom=2', 'zoom=0').replace('zoom=3', 'zoom=0')
+            
+            # Si l'URL contenait déjà zoom=0, la garder telle quelle
+            if 'zoom=0' not in high_quality_url and 'zoom=' in cover_url:
+                # Remplacer le paramètre zoom existant par zoom=0
+                import re
+                high_quality_url = re.sub(r'zoom=\d+', 'zoom=0', cover_url)
+            
+            return high_quality_url
+        
+        return cover_url
     
     def _get_google_book_by_isbn(self, isbn: str) -> Optional[Dict]:
         """Récupère un livre de Google Books par ISBN"""
@@ -214,45 +177,11 @@ class BooksService:
         if self.google_api_key:
             params['key'] = self.google_api_key
         
-        data = self._make_request(url, params, "google_books")
+        data = self._make_request(url, params)
         
         if data and data.get('items'):
             return self._format_google_book(data['items'][0])
         return None
-    
-    def _format_openlibrary_book(self, book_data: Dict) -> Optional[Dict]:
-        """Formate les données d'OpenLibrary"""
-        if not book_data.get('title'):
-            return None
-        
-        # Construire l'URL de couverture
-        cover_url = None
-        if book_data.get('cover_i'):
-            cover_url = f"https://covers.openlibrary.org/b/id/{book_data['cover_i']}-L.jpg"
-        
-        # Récupérer les auteurs
-        authors = book_data.get('author_name', [])
-        author_str = ', '.join(authors) if authors else 'Auteur inconnu'
-        
-        # Récupérer les sujets/genres
-        subjects = book_data.get('subject', [])
-        genres = subjects[:3] if subjects else []
-        
-        return {
-            'external_id': book_data.get('key', '').replace('/works/', ''),
-            'title': book_data.get('title', ''),
-            'authors': authors,
-            'description': f"Par {author_str}" + (f" - Genres: {', '.join(genres)}" if genres else ""),
-            'poster_url': cover_url,
-            'first_publish_year': book_data.get('first_publish_year'),
-            'publishers': book_data.get('publisher', []),
-            'isbn': book_data.get('isbn', []),
-            'subjects': subjects,
-            'languages': book_data.get('language', []),
-            'page_count': book_data.get('number_of_pages_median'),
-            'source': 'openlibrary',
-            'type': 'book'
-        }
     
     def _format_google_book(self, book_data: Dict) -> Optional[Dict]:
         """Formate les données de Google Books"""
@@ -261,16 +190,9 @@ class BooksService:
         if not volume_info.get('title'):
             return None
         
-        # Récupérer la meilleure image de couverture
+        # Récupérer la meilleure image de couverture avec zoom optimal
         images = volume_info.get('imageLinks', {})
-        cover_url = (images.get('large') or 
-                    images.get('medium') or 
-                    images.get('small') or 
-                    images.get('thumbnail'))
-        
-        # Convertir en HTTPS si nécessaire
-        if cover_url and cover_url.startswith('http://'):
-            cover_url = cover_url.replace('http://', 'https://')
+        cover_url = self._get_high_quality_cover_url(images)
         
         authors = volume_info.get('authors', [])
         author_str = ', '.join(authors) if authors else 'Auteur inconnu'
@@ -302,31 +224,6 @@ class BooksService:
             'type': 'book'
         }
     
-    def _format_openlibrary_book_details(self, book_data: Dict) -> Dict:
-        """Formate les détails complets d'un livre OpenLibrary"""
-        # Cette méthode peut être étendue pour récupérer plus de détails
-        # depuis l'API Works ou Authors d'OpenLibrary
-        return {
-            'external_id': book_data.get('key', ''),
-            'title': book_data.get('title', ''),
-            'description': self._get_openlibrary_description(book_data),
-            'source': 'openlibrary',
-            'type': 'book'
-        }
-    
-    def _get_openlibrary_description(self, book_data: Dict) -> str:
-        """Extrait une description d'un livre OpenLibrary"""
-        # OpenLibrary peut avoir différents formats de description
-        description = book_data.get('description', '')
-        
-        if isinstance(description, dict):
-            return description.get('value', '')
-        elif isinstance(description, list) and description:
-            return description[0] if isinstance(description[0], str) else description[0].get('value', '')
-        elif isinstance(description, str):
-            return description
-        
-        return ''
     
     def _extract_isbn(self, identifiers: List[Dict]) -> List[str]:
         """Extrait les ISBN d'une liste d'identifiants"""
