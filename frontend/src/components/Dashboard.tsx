@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -64,7 +65,9 @@ interface ListItem {
   updated_at: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate, listId = 1 }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const { listId } = useParams();
+  const currentListId = parseInt(listId || '1', 10);
   const [bottomNavValue, setBottomNavValue] = useState(0);
   const [list, setList] = useState<TasteList | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
@@ -84,7 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, listId = 1 }) => {
         const token = localStorage.getItem('access_token');
         
         // Récupérer les détails de la liste
-        const listResponse = await fetch(`http://localhost:8000/api/lists/${listId}/`, {
+        const listResponse = await fetch(`http://localhost:8000/api/lists/${currentListId}/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -94,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, listId = 1 }) => {
         }
         
         // Récupérer les éléments de la liste
-        const itemsResponse = await fetch(`http://localhost:8000/api/lists/${listId}/items/`, {
+        const itemsResponse = await fetch(`http://localhost:8000/api/lists/${currentListId}/items/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -112,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, listId = 1 }) => {
     };
 
     fetchListData();
-  }, [listId]);
+  }, [currentListId]);
 
   const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
@@ -150,13 +153,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, listId = 1 }) => {
     try {
       const token = localStorage.getItem('access_token');
       const url = editingItem 
-        ? `http://localhost:8000/api/lists/${listId}/items/${editingItem.id}/`
-        : `http://localhost:8000/api/lists/${listId}/items/`;
+        ? `http://localhost:8000/api/lists/${currentListId}/items/${editingItem.id}/`
+        : `http://localhost:8000/api/lists/${currentListId}/items/`;
       
       const method = editingItem ? 'PUT' : 'POST';
       const body = {
         ...formData,
-        ...(editingItem ? {} : { list: listId })
+        ...(editingItem ? {} : { list: currentListId })
       };
 
       const response = await fetch(url, {

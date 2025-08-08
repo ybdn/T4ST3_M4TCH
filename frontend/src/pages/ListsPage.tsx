@@ -13,8 +13,7 @@ import {
   CardContent,
   CardActionArea,
   Alert,
-  CircularProgress,
-  Grid
+  CircularProgress
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -49,7 +48,7 @@ interface CategoryData {
 }
 
 interface ListsPageProps {
-  onNavigate?: (section: string) => void;
+  onNavigate?: (section: string, params?: any) => void;
 }
 
 const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
@@ -57,7 +56,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bottomNavValue, setBottomNavValue] = useState(3); // "Mes listes" selected
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedListId, setSelectedListId] = useState<number | null>(null);
   const { user } = useAuth();
 
   const handleBottomNavChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -96,29 +95,44 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
 
   // Fonction pour naviguer vers le Dashboard d'une catégorie
   const handleCategoryClick = (listId: number, category: string) => {
-    // TODO: Navigation vers Dashboard avec l'ID de la liste
-    console.log(`Navigate to Dashboard for list ${listId} (${category})`);
+    setSelectedListId(listId);
+    // Naviguer vers le Dashboard avec l'ID de la liste
+    onNavigate?.('dashboard', { listId });
   };
 
-  // Configuration des icônes et couleurs par catégorie
   const getCategoryConfig = (category: string) => {
     const configs = {
-      'FILMS': { icon: MovieIcon, color: '#e53e3e', bgColor: '#fef2f2' },
-      'SERIES': { icon: TvIcon, color: '#3182ce', bgColor: '#ebf8ff' },
-      'MUSIQUE': { icon: MusicIcon, color: '#38a169', bgColor: '#f0fff4' },
-      'LIVRES': { icon: BookIcon, color: '#d69e2e', bgColor: '#fffaf0' }
+      'FILMS': {
+        icon: MovieIcon,
+        color: '#e53e3e',
+        bgColor: '#fef5f5'
+      },
+      'SERIES': {
+        icon: TvIcon,
+        color: '#3182ce',
+        bgColor: '#f0f8ff'
+      },
+      'MUSIQUE': {
+        icon: MusicIcon,
+        color: '#38a169',
+        bgColor: '#f0fff4'
+      },
+      'LIVRES': {
+        icon: BookIcon,
+        color: '#d69e2e',
+        bgColor: '#fffbeb'
+      }
     };
-    return configs[category as keyof typeof configs] || { icon: ListIcon, color: '#718096', bgColor: '#f7fafc' };
+    return configs[category as keyof typeof configs] || configs['FILMS'];
   };
 
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Header */}
-      <AppBar position="static" sx={{ backgroundColor: '#1976d2' }}>
+      <AppBar position="static" sx={{ backgroundColor: '#4caf50' }}>
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Mes Collections
+            Mes Listes
           </Typography>
           <IconButton color="inherit" size="large" aria-label="notifications">
             <NotificationsIcon />
@@ -131,39 +145,32 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
 
       {/* Contenu principal */}
       <Container 
-        maxWidth="sm" 
+        maxWidth="md" 
         sx={{ 
           flexGrow: 1, 
-          py: 1, 
+          py: 2, 
           px: 2, 
           overflow: 'auto',
           pb: 9 // Espace pour la bottom navigation
         }}
       >
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
-          <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-            <Typography 
-              variant="h4" 
-              component="h1" 
-              gutterBottom
-              sx={{ 
-                fontSize: { xs: '1.5rem', sm: '2.125rem' },
-                fontWeight: 'bold'
-              }}
-            >
-              Mes Collections
-            </Typography>
-            <Typography 
-              variant="body1" 
-              color="text.secondary"
-              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
-            >
-              Gérez vos goûts en films, séries, musique et livres
-            </Typography>
-          </Box>
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            gutterBottom
+            sx={{ 
+              fontSize: { xs: '1.5rem', sm: '2.125rem' },
+              fontWeight: 'bold',
+              mb: 3,
+              textAlign: 'center'
+            }}
+          >
+            Mes Collections
+          </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
@@ -173,114 +180,117 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
               <CircularProgress />
             </Box>
           ) : (
-            <Grid container spacing={2}>
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)' },
+              gap: 2
+            }}>
               {Object.entries(categories).map(([categoryKey, categoryData]) => {
                 const config = getCategoryConfig(categoryKey);
                 const IconComponent = config.icon;
                 const list = categoryData.list;
                 
                 return (
-                  <Grid item xs={6} sm={6} key={categoryKey}>
-                    <Card 
-                      sx={{ 
-                        height: '100%',
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: 6
-                        }
-                      }}
+                  <Card 
+                    key={categoryKey}
+                    sx={{ 
+                      height: '100%',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 6
+                      }
+                    }}
+                  >
+                    <CardActionArea
+                      sx={{ height: '100%' }}
+                      onClick={() => list && handleCategoryClick(list.id, categoryKey)}
                     >
-                      <CardActionArea
-                        sx={{ height: '100%' }}
-                        onClick={() => list && handleCategoryClick(list.id, categoryKey)}
-                      >
-                        <CardContent sx={{ p: { xs: 2, sm: 3 }, backgroundColor: config.bgColor }}>
-                          {/* Mobile: Layout vertical, Desktop: Layout horizontal */}
-                          <Box sx={{ 
-                            display: 'flex', 
-                            flexDirection: { xs: 'column', sm: 'row' },
-                            alignItems: { xs: 'center', sm: 'flex-start' },
-                            mb: 2 
-                          }}>
-                            <Box
-                              sx={{
-                                width: { xs: 40, sm: 48 },
-                                height: { xs: 40, sm: 48 },
-                                borderRadius: '50%',
-                                backgroundColor: config.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mr: { xs: 0, sm: 2 },
-                                mb: { xs: 1, sm: 0 }
-                              }}
-                            >
-                              <IconComponent sx={{ color: 'white', fontSize: { xs: 20, sm: 24 } }} />
-                            </Box>
-                            <Typography 
-                              variant="h6" 
-                              component="h2" 
-                              color={config.color}
-                              sx={{ 
-                                fontSize: { xs: '0.9rem', sm: '1.25rem' },
-                                textAlign: { xs: 'center', sm: 'left' },
-                                fontWeight: 'medium'
-                              }}
-                            >
-                              {categoryData.category_label}
-                            </Typography>
+                      <CardContent sx={{ p: { xs: 2, sm: 3 }, backgroundColor: config.bgColor }}>
+                        {/* Mobile: Layout vertical, Desktop: Layout horizontal */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          alignItems: { xs: 'center', sm: 'flex-start' },
+                          mb: 2 
+                        }}>
+                          <Box
+                            sx={{
+                              width: { xs: 40, sm: 48 },
+                              height: { xs: 40, sm: 48 },
+                              borderRadius: '50%',
+                              backgroundColor: config.color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mr: { xs: 0, sm: 2 },
+                              mb: { xs: 1, sm: 0 }
+                            }}
+                          >
+                            <IconComponent sx={{ color: 'white', fontSize: { xs: 20, sm: 24 } }} />
                           </Box>
-                          
                           <Typography 
-                            variant="h4" 
+                            variant="h6" 
+                            component="h2" 
+                            color={config.color}
                             sx={{ 
-                              mb: 1, 
-                              color: config.color, 
-                              fontWeight: 'bold',
-                              fontSize: { xs: '1.5rem', sm: '2.125rem' },
-                              textAlign: { xs: 'center', sm: 'left' }
-                            }}
-                          >
-                            {list?.items_count || 0}
-                          </Typography>
-                          
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
-                            sx={{ 
-                              mb: { xs: 1, sm: 2 },
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                              textAlign: { xs: 'center', sm: 'left' }
-                            }}
-                          >
-                            {list?.items_count === 0 
-                              ? 'Aucun élément'
-                              : list?.items_count === 1 
-                                ? '1 élément' 
-                                : `${list.items_count} éléments`
-                            }
-                          </Typography>
-
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontStyle: 'italic', 
-                              color: 'text.secondary',
-                              fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                              fontSize: { xs: '0.9rem', sm: '1.25rem' },
                               textAlign: { xs: 'center', sm: 'left' },
-                              display: { xs: 'none', sm: 'block' } // Masquer sur mobile pour économiser l'espace
+                              fontWeight: 'medium'
                             }}
                           >
-                            {list?.description || 'Cliquez pour gérer cette collection'}
+                            {categoryData.category_label}
                           </Typography>
-                        </CardContent>
-                      </CardActionArea>
-                    </Card>
-                  </Grid>
+                        </Box>
+                        
+                        <Typography 
+                          variant="h4" 
+                          sx={{ 
+                            mb: 1, 
+                            color: config.color, 
+                            fontWeight: 'bold',
+                            fontSize: { xs: '1.5rem', sm: '2.125rem' },
+                            textAlign: { xs: 'center', sm: 'left' }
+                          }}
+                        >
+                          {list?.items_count || 0}
+                        </Typography>
+                        
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: { xs: 1, sm: 2 },
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            textAlign: { xs: 'center', sm: 'left' }
+                          }}
+                        >
+                          {list?.items_count === 0 
+                            ? 'Aucun élément'
+                            : list?.items_count === 1 
+                              ? '1 élément' 
+                              : `${list?.items_count} éléments`
+                          }
+                        </Typography>
+
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontStyle: 'italic', 
+                            color: 'text.secondary',
+                            fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                            textAlign: { xs: 'center', sm: 'left' },
+                            display: { xs: 'none', sm: 'block' } // Masquer sur mobile pour économiser l'espace
+                          }}
+                        >
+                          {list?.description || 'Cliquez pour gérer cette collection'}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
                 );
               })}
-            </Grid>
+            </Box>
           )}
         </Paper>
       </Container>

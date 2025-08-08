@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import cacheService from '../services/cacheService';
 import {
   TextField,
   Box,
@@ -45,8 +47,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [error, setError] = useState('');
   
+  const { error, handleError, clearError } = useErrorHandler();
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>();
 
@@ -59,7 +61,18 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     setIsLoading(true);
-    setError('');
+    clearError();
+
+    // Vérifier le cache d'abord
+    const cacheKey = cacheService.generateSearchKey(searchQuery, category, 8);
+    const cachedResults = cacheService.get<{ results: SearchResult[] }>(cacheKey);
+    
+    if (cachedResults) {
+      setResults(cachedResults.results);
+      setShowResults(true);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem('access_token');
@@ -83,16 +96,20 @@ const SearchBar: React.FC<SearchBarProps> = ({
       }
 
       const data = await response.json();
-      setResults(data.results || []);
+      const results = data.results || [];
+      
+      // Mettre en cache pour 2 minutes
+      cacheService.set(cacheKey, { results }, 2 * 60 * 1000);
+      
+      setResults(results);
       setShowResults(true);
     } catch (err) {
-      console.error('Search error:', err);
-      setError('Erreur lors de la recherche');
+      handleError(err, 'SearchBar');
       setResults([]);
     } finally {
       setIsLoading(false);
     }
-  }, [category]);
+  }, [category, clearError, handleError]);
 
   // Debounce search queries
   useEffect(() => {
@@ -224,7 +241,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           {error ? (
             <Box sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="body2" color="error">
-                {error}
+                {error.message}
               </Typography>
             </Box>
           ) : (

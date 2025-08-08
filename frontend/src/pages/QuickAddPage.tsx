@@ -30,10 +30,12 @@ import {
   LibraryMusic as MusicIcon,
   MenuBook as BookIcon,
   Tv as TvIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Language as LanguageIcon
 } from '@mui/icons-material';
 import SearchBar from '../components/SearchBar';
 import SuggestionCards from '../components/SuggestionCards';
+import ExternalSearchResults from '../components/ExternalSearchResults';
 
 interface QuickAddPageProps {
   onNavigate?: (section: string) => void;
@@ -115,12 +117,21 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
     await quickAddItem(suggestion.title, suggestion.description, suggestion.category);
   };
 
+  const handleExternalResultAdd = async (result: any) => {
+    await quickAddItem(result.title, result.description, result.category);
+  };
+
+  const handleExternalResultSelect = (result: any) => {
+    // Pour l'instant, juste ajouter à la liste
+    handleExternalResultAdd(result);
+  };
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  const handleCategoryChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    setSelectedCategory(event.target.value as string);
+  const handleCategoryChange = (event: any) => {
+    setSelectedCategory(event.target.value);
   };
 
   const getSelectedCategoryConfig = () => {
@@ -235,6 +246,11 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
                 label="Suggestions" 
                 iconPosition="start"
               />
+              <Tab 
+                icon={<LanguageIcon />} 
+                label="APIs Externes" 
+                iconPosition="start"
+              />
             </Tabs>
           </Box>
 
@@ -279,6 +295,48 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({ onNavigate }) => {
                 title={`Suggestions ${selectedCategory === 'ALL' ? 'Populaires' : getSelectedCategoryConfig().label}`}
                 limit={6}
               />
+            </Box>
+          )}
+
+          {tabValue === 2 && (
+            <Box>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 2,
+                  fontSize: { xs: '1rem', sm: '1.25rem' },
+                  fontWeight: 'medium'
+                }}
+              >
+                Recherche dans les APIs Externes
+              </Typography>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  mb: 3,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
+                Recherchez dans TMDB, Spotify et OpenLibrary pour des données enrichies
+              </Typography>
+              
+              <SearchBar
+                category={selectedCategory === 'ALL' ? undefined : selectedCategory}
+                onSelect={handleSearchSelect}
+                onQuickAdd={handleSearchSelect}
+                placeholder={`Rechercher dans les APIs externes...`}
+                autoFocus
+              />
+              
+              <Box sx={{ mt: 3 }}>
+                <ExternalSearchResults
+                  query=""
+                  category={selectedCategory === 'ALL' ? undefined : selectedCategory}
+                  onAdd={handleExternalResultAdd}
+                  onSelect={handleExternalResultSelect}
+                />
+              </Box>
             </Box>
           )}
         </Paper>

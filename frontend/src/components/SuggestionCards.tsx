@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import cacheService from '../services/cacheService';
 import {
   Box,
   Card,
@@ -45,12 +47,23 @@ const SuggestionCards: React.FC<SuggestionCardsProps> = ({
 }) => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [addingIds, setAddingIds] = useState<Set<number>>(new Set());
+  
+  const { error, handleError, clearError } = useErrorHandler();
 
   const fetchSuggestions = async () => {
     setLoading(true);
-    setError('');
+    clearError();
+
+    // Vérifier le cache d'abord
+    const cacheKey = cacheService.generateSuggestionsKey(category, limit);
+    const cachedData = cacheService.get<{ suggestions: Suggestion[] }>(cacheKey);
+    
+    if (cachedData) {
+      setSuggestions(cachedData.suggestions);
+      setLoading(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem('access_token');
@@ -73,10 +86,14 @@ const SuggestionCards: React.FC<SuggestionCardsProps> = ({
       }
 
       const data = await response.json();
-      setSuggestions(data.suggestions || []);
+      const suggestions = data.suggestions || [];
+      
+      // Mettre en cache pour 5 minutes
+      cacheService.set(cacheKey, { suggestions }, 5 * 60 * 1000);
+      
+      setSuggestions(suggestions);
     } catch (err) {
-      console.error('Suggestions error:', err);
-      setError('Impossible de charger les suggestions');
+      handleError(err, 'SuggestionCards');
     } finally {
       setLoading(false);
     }
@@ -167,7 +184,7 @@ const SuggestionCards: React.FC<SuggestionCardsProps> = ({
           </IconButton>
         }
       >
-        {error}
+        {error.message}
       </Alert>
     );
   }

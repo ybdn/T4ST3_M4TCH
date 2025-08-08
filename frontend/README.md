@@ -33,6 +33,7 @@ Basé sur le wireframe `03-dashboard.ascii`, le dashboard comprend :
 - Ajout rapide
 
 #### 3. Fonctionnalités Implémentées
+
 - ✅ Interface responsive (mobile-first)
 - ✅ Édition en ligne du titre et de la description
 - ✅ Navigation entre les sections (structure prête)
@@ -41,6 +42,7 @@ Basé sur le wireframe `03-dashboard.ascii`, le dashboard comprend :
 - ✅ Accessibilité (aria-labels, navigation clavier)
 
 #### 4. Architecture du Code
+
 ```
 src/
 ├── components/
@@ -53,15 +55,18 @@ src/
 ### 🎨 Design System
 
 **Couleurs**
+
 - Primary: `#1976d2` (Bleu Material-UI)
 - Secondary: `#dc004e` (Rose/Rouge)
 - Background: `#f5f5f5` (Gris clair)
 
 **Typographie**
+
 - Police: Roboto (Material Design)
 - Hiérarchie claire avec différentes tailles et poids
 
 **Composants**
+
 - AppBar avec ombre subtile
 - Paper avec coins arrondis
 - BottomNavigation avec bordure supérieure
