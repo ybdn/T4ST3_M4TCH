@@ -6,8 +6,9 @@ from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
 from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
-from .models import List, ListItem
+from .models import List, ListItem, ExternalReference
 from .permissions import IsOwnerOrReadOnly
+from .services.external_enrichment_service import ExternalEnrichmentService
 import json
 import hashlib
 
@@ -168,6 +169,16 @@ class ListItemViewSet(viewsets.ModelViewSet):
                 serializer.validated_data['position'] = max_position + 1
             
             serializer.save()
+
+        # Enrichissement automatique après création (best-effort, non bloquant)
+        try:
+            created_item = serializer.instance
+            if created_item and created_item.list.category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+                enrichment_service = ExternalEnrichmentService()
+                enrichment_service.enrich_list_item(created_item, force_refresh=False)
+        except Exception:
+            # Ne pas bloquer la création en cas d'erreur d'enrichissement
+            pass
 
 
 @api_view(['GET'])
@@ -349,6 +360,13 @@ def quick_add_item(request):
             position=max_position + 1
         )
         
+        # Enrichissement automatique (best-effort)
+        try:
+            enrichment_service = ExternalEnrichmentService()
+            enrichment_service.enrich_list_item(new_item, force_refresh=False)
+        except Exception:
+            pass
+
         # Sérialiser la réponse
         serializer = ListItemSerializer(new_item)
         
@@ -454,6 +472,364 @@ def _get_base_suggestions(category, limit):
 
 def _get_generic_suggestions(query, category, limit):
     """Suggestions génériques basées sur la requête"""
-    # Pour l'instant, retourner une liste vide
-    # Peut être étendu avec de l'IA/ML plus tard
-    return []
+    # Suggestions intelligentes basées sur la requête et la catégorie
+    generic_suggestions = {
+        'FILMS': [
+            {'title': f'{query} - Film', 'description': f'Film sur le thème de {query}'},
+            {'title': f'Le {query}', 'description': f'Film intitulé {query}'},
+            {'title': f'{query} : L\'histoire', 'description': f'Documentaire sur {query}'},
+        ],
+        'SERIES': [
+            {'title': f'{query} - Série', 'description': f'Série sur le thème de {query}'},
+            {'title': f'{query} : La série', 'description': f'Série intitulée {query}'},
+        ],
+        'MUSIQUE': [
+            {'title': f'{query} - Album', 'description': f'Album de {query}'},
+            {'title': f'{query} - Single', 'description': f'Chanson de {query}'},
+        ],
+        'LIVRES': [
+            {'title': f'{query} - Livre', 'description': f'Livre sur {query}'},
+            {'title': f'Le {query}', 'description': f'Livre intitulé {query}'},
+        ]
+    }
+    
+    suggestions = generic_suggestions.get(category, [])[:limit]
+    return [
+        {
+            'title': item['title'],
+            'description': item['description'],
+            'category': category,
+            'category_display': dict(List.Category.choices)[category],
+            'popularity': 0,
+            'type': 'suggestion'
+        }
+        for item in suggestions
+    ]
+
+
+# =====================================
+# EXTERNAL APIS ENDPOINTS
+# =====================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_external(request):
+    """
+    Recherche enrichie dans les APIs externes
+    Paramètres:
+    - q: terme de recherche
+    - category: filtre par catégorie (optionnel)
+    - source: filtre par API source (tmdb, spotify, books)
+    - limit: nombre max de résultats (défaut: 10)
+    """
+    query = request.GET.get('q', '').strip()
+    category = request.GET.get('category', '').strip()
+    source = request.GET.get('source', '').strip()
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    
+    if not query or len(query) < 2:
+        return Response({'results': [], 'message': 'Requête trop courte'})
+    
+    try:
+        enrichment_service = ExternalEnrichmentService()
+        
+        # Recherche enrichie
+        if source:
+            # Recherche dans une API spécifique
+            if source == 'tmdb':
+                if category == 'FILMS':
+                    results = enrichment_service.tmdb.search_movies(query, limit)
+                elif category == 'SERIES':
+                    results = enrichment_service.tmdb.search_tv_shows(query, limit)
+                else:
+                    # Combiner films et séries
+                    movies = enrichment_service.tmdb.search_movies(query, limit // 2)
+                    shows = enrichment_service.tmdb.search_tv_shows(query, limit // 2)
+                    results = movies + shows
+            elif source == 'spotify':
+                results = enrichment_service.spotify.search_music(query, limit)
+            elif source == 'books':
+                results = enrichment_service.books.search_books(query, limit)
+            else:
+                return Response({'error': 'Source API non supportée'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Recherche globale
+            results = enrichment_service.search_external(query, category, limit)
+        
+        return Response({
+            'results': results,
+            'query': query,
+            'category': category,
+            'source': source,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la recherche externe: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_trending_external(request):
+    """
+    Récupère le contenu tendance des APIs externes
+    Paramètres:
+    - category: filtre par catégorie (optionnel)
+    - time_window: day/week pour TMDB (défaut: week)
+    - limit: nombre de résultats (défaut: 20)
+    """
+    category = request.GET.get('category', '').strip()
+    time_window = request.GET.get('time_window', 'week')
+    limit = min(int(request.GET.get('limit', 20)), 50)
+    
+    try:
+        enrichment_service = ExternalEnrichmentService()
+        results = enrichment_service.get_trending_content(category, limit)
+        
+        return Response({
+            'results': results,
+            'category': category or 'all',
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la récupération du contenu tendance: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def enrich_list_item(request, list_pk, item_pk):
+    """
+    Enrichit un élément de liste existant avec des métadonnées externes
+    """
+    try:
+        # Vérifier que l'élément appartient à l'utilisateur
+        list_item = ListItem.objects.get(
+            pk=item_pk,
+            list__pk=list_pk,
+            list__owner=request.user
+        )
+        
+        force_refresh = request.data.get('force_refresh', False)
+        
+        enrichment_service = ExternalEnrichmentService()
+        success = enrichment_service.enrich_list_item(list_item, force_refresh)
+        
+        if success:
+            # Récupérer les données enrichies
+            external_ref = getattr(list_item, 'external_ref', None)
+            if external_ref:
+                return Response({
+                    'message': f'Élément "{list_item.title}" enrichi avec succès',
+                    'external_reference': {
+                        'source': external_ref.external_source,
+                        'poster_url': external_ref.poster_url,
+                        'backdrop_url': external_ref.backdrop_url,
+                        'rating': external_ref.rating,
+                        'release_date': external_ref.release_date,
+                        'metadata': external_ref.metadata
+                    }
+                })
+            else:
+                return Response({'message': 'Enrichissement effectué mais aucune donnée trouvée'})
+        else:
+            return Response(
+                {'error': 'Impossible d\'enrichir cet élément'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except ListItem.DoesNotExist:
+        return Response(
+            {'error': 'Élément non trouvé ou vous n\'êtes pas le propriétaire'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de l\'enrichissement: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_from_external(request):
+    """
+    Importe directement depuis un ID externe
+    Body: {
+        "external_id": "550",
+        "source": "tmdb|spotify|openlibrary|google_books",
+        "category": "FILMS|SERIES|MUSIQUE|LIVRES"
+    }
+    """
+    external_id = request.data.get('external_id', '').strip()
+    source = request.data.get('source', '').strip()
+    category = request.data.get('category', '').strip()
+    
+    # Validation
+    if not external_id:
+        return Response(
+            {'error': 'L\'ID externe est obligatoire'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if source not in ['tmdb', 'spotify', 'openlibrary', 'google_books']:
+        return Response(
+            {'error': 'Source non supportée'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if category not in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+        return Response(
+            {'error': 'Catégorie invalide'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        enrichment_service = ExternalEnrichmentService()
+        result = enrichment_service.import_from_external_id(external_id, source, category, request.user)
+        
+        if result:
+            list_item = result['list_item']
+            external_data = result['external_data']
+            
+            return Response({
+                'message': f'"{list_item.title}" importé avec succès',
+                'item': ListItemSerializer(list_item).data,
+                'external_data': {
+                    'title': external_data.get('title'),
+                    'description': external_data.get('description'),
+                    'poster_url': external_data.get('poster_url'),
+                    'rating': external_data.get('rating'),
+                    'source': source
+                }
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                {'error': 'Impossible de trouver cet élément dans l\'API externe'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de l\'import: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_external_details(request, source, external_id):
+    """
+    Récupère les détails complets d'un élément externe
+    """
+    try:
+        enrichment_service = ExternalEnrichmentService()
+        
+        if source == 'tmdb':
+            # Essayer film puis série
+            details = (enrichment_service.tmdb.get_movie_details(external_id) or
+                      enrichment_service.tmdb.get_tv_show_details(external_id))
+        elif source == 'spotify':
+            # Essayer track puis artist puis album
+            details = (enrichment_service.spotify.get_track_details(external_id) or
+                      enrichment_service.spotify.get_artist_details(external_id) or
+                      enrichment_service.spotify.get_album_details(external_id))
+        elif source in ['openlibrary', 'google_books']:
+            details = enrichment_service.books.get_book_details_by_isbn(external_id)
+        else:
+            return Response(
+                {'error': 'Source non supportée'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if details:
+            return Response({
+                'external_id': external_id,
+                'source': source,
+                'details': details
+            })
+        else:
+            return Response(
+                {'error': 'Élément non trouvé'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_trending_suggestions(request, category):
+    """
+    Suggestions basées sur le contenu tendance des APIs externes
+    """
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    time_window = request.GET.get('time_window', 'week')
+    
+    try:
+        enrichment_service = ExternalEnrichmentService()
+        results = enrichment_service.get_trending_content(category, limit)
+        
+        return Response({
+            'suggestions': results,
+            'category': category,
+            'time_window': time_window,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la récupération des tendances: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_similar_suggestions(request, item_id):
+    """
+    Suggestions similaires basées sur un élément existant
+    """
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    
+    try:
+        # Récupérer l'élément de référence
+        list_item = ListItem.objects.get(
+            id=item_id,
+            list__owner=request.user
+        )
+        
+        # Utiliser la nouvelle méthode pour obtenir du contenu similaire
+        enrichment_service = ExternalEnrichmentService()
+        results = enrichment_service.get_similar_content(list_item, limit)
+        
+        return Response({
+            'suggestions': results,
+            'reference_item': {
+                'id': list_item.id,
+                'title': list_item.title,
+                'category': list_item.list.category
+            },
+            'total': len(results)
+        })
+        
+    except ListItem.DoesNotExist:
+        return Response(
+            {'error': 'Élément de référence non trouvé'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la récupération des suggestions: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

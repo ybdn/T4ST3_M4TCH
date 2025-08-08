@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
 
 class List(models.Model):
@@ -79,3 +81,152 @@ class ListItem(models.Model):
     
     def __str__(self):
         return f"{self.title} ({self.list.get_category_display()})"
+
+
+class ExternalReference(models.Model):
+    """Référence vers une API externe pour enrichir un élément"""
+    
+    class Source(models.TextChoices):
+        TMDB = 'tmdb', 'The Movie Database'
+        SPOTIFY = 'spotify', 'Spotify'
+        OPENLIBRARY = 'openlibrary', 'Open Library'
+        GOOGLE_BOOKS = 'google_books', 'Google Books'
+    
+    list_item = models.OneToOneField(
+        ListItem, 
+        on_delete=models.CASCADE, 
+        related_name='external_ref',
+        verbose_name="Élément de liste"
+    )
+    external_id = models.CharField(
+        max_length=100, 
+        verbose_name="ID externe"
+    )
+    external_source = models.CharField(
+        max_length=20, 
+        choices=Source.choices,
+        verbose_name="Source API"
+    )
+    poster_url = models.URLField(
+        blank=True, 
+        null=True,
+        verbose_name="URL du poster/pochette"
+    )
+    backdrop_url = models.URLField(
+        blank=True, 
+        null=True,
+        verbose_name="URL de l'image de fond"
+    )
+    metadata = models.JSONField(
+        default=dict, 
+        blank=True,
+        verbose_name="Métadonnées enrichies"
+    )
+    rating = models.FloatField(
+        blank=True, 
+        null=True,
+        verbose_name="Note (TMDB, etc.)"
+    )
+    release_date = models.DateField(
+        blank=True, 
+        null=True,
+        verbose_name="Date de sortie/publication"
+    )
+    last_updated = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Dernière mise à jour"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    
+    class Meta:
+        verbose_name = "Référence externe"
+        verbose_name_plural = "Références externes"
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['external_id', 'external_source'], 
+                name='unique_external_reference'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"{self.list_item.title} → {self.get_external_source_display()} ({self.external_id})"
+
+    def needs_refresh(self, days=7):
+        """Vérifie si les données doivent être actualisées"""
+        return self.last_updated < timezone.now() - timedelta(days=days)
+
+
+class APICache(models.Model):
+    """Cache pour les réponses d'APIs externes"""
+    
+    cache_key = models.CharField(
+        max_length=255, 
+        unique=True,
+        verbose_name="Clé de cache"
+    )
+    data = models.JSONField(
+        verbose_name="Données cachées"
+    )
+    expires_at = models.DateTimeField(
+        verbose_name="Date d'expiration"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    
+    class Meta:
+        verbose_name = "Cache API"
+        verbose_name_plural = "Cache API"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['cache_key']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"Cache: {self.cache_key}"
+    
+    @classmethod
+    def is_expired(cls, cache_key):
+        """Vérifie si une entrée de cache est expirée"""
+        try:
+            cache_obj = cls.objects.get(cache_key=cache_key)
+            return timezone.now() > cache_obj.expires_at
+        except cls.DoesNotExist:
+            return True
+    
+    @classmethod
+    def get_cached_data(cls, cache_key):
+        """Récupère les données du cache si valides"""
+        try:
+            cache_obj = cls.objects.get(cache_key=cache_key)
+            if timezone.now() <= cache_obj.expires_at:
+                return cache_obj.data
+            else:
+                # Nettoyer l'entrée expirée
+                cache_obj.delete()
+                return None
+        except cls.DoesNotExist:
+            return None
+    
+    @classmethod
+    def set_cached_data(cls, cache_key, data, ttl_hours=24):
+        """Sauvegarde les données dans le cache"""
+        expires_at = timezone.now() + timedelta(hours=ttl_hours)
+        cls.objects.update_or_create(
+            cache_key=cache_key,
+            defaults={
+                'data': data,
+                'expires_at': expires_at
+            }
+        )
+    
+    @classmethod
+    def clean_expired(cls):
+        """Nettoie les entrées de cache expirées"""
+        return cls.objects.filter(expires_at__lt=timezone.now()).delete()
