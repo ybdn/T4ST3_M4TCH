@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Snackbar,
-  Alert,
-  AlertColor,
-  Slide,
-  SlideProps
-} from '@mui/material';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import Slide from '@mui/material/Slide';
+import type { AlertColor } from '@mui/material/Alert';
+import type { SlideProps } from '@mui/material/Slide';
 
 interface FeedbackMessage {
   id: string;
