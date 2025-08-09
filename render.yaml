@@ -11,7 +11,7 @@ services:
   - type: web
     name: tastematch-backend
     runtime: docker
-    plan: free
+    plan: starter
     region: frankfurt
     
     # Configuration Docker
