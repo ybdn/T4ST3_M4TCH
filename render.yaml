@@ -12,7 +12,7 @@ services:
     name: tastematch-backend
     env: python3
     plan: free
-    region: oregon
+    region: frankfurt
     
     # Code source et build
     rootDir: ./backend
@@ -47,7 +47,7 @@ services:
   - type: static_site
     name: tastematch-frontend
     plan: free
-    region: oregon
+    region: frankfurt
     
     # Code source et build
     rootDir: ./frontend
@@ -79,4 +79,4 @@ databases:
   - name: tastematch-db
     plan: free
     postgresMajorVersion: 15
-    region: oregon
+    region: frankfurt
