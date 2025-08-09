@@ -47,9 +47,7 @@ services:
   - type: web
     name: tastematch-frontend
     runtime: static
-    plan: free
-    region: frankfurt
-    
+    plan: free    
     # Code source et build
     rootDir: ./frontend
     buildCommand: "npm install && npm run build"
