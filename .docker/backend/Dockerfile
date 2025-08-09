@@ -27,5 +27,5 @@ RUN python manage.py collectstatic --noinput || echo "Static files collection sk
 # Port d'exposition
 EXPOSE 8000
 
-# Commande de démarrage pour la production
-CMD ["python", "manage.py", "migrate", "&&", "gunicorn", "--bind", "0.0.0.0:8000", "tastematch_api.wsgi:application"]
+# Commande par défaut (sera surchargée par dockerCommand dans render.yaml)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "tastematch_api.wsgi:application"]

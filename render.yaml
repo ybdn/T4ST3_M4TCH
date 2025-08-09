@@ -17,7 +17,8 @@ services:
     # Configuration Docker
     dockerContext: .
     dockerfilePath: ./.docker/backend/Dockerfile
-    dockerCommand: "/bin/bash -c 'python manage.py migrate && gunicorn tastematch_api.wsgi:application --host 0.0.0.0 --port $PORT'"
+    preDeployCommand: python manage.py migrate
+    dockerCommand: gunicorn tastematch_api.wsgi:application --host 0.0.0.0 --port $PORT
     
     # Variables d'environnement
     envVars:
