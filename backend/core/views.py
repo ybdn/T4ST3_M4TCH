@@ -945,19 +945,30 @@ def get_trending_external(request):
         if category == 'MUSIQUE':
             try:
                 spotify = SpotifyService()
-                featured_albums = spotify.get_featured_playlists(limit=limit)
-                for album in featured_albums:
-                    if isinstance(album, dict) and album.get('external_id'):
-                        results.append({
-                            'external_id': album.get('external_id'),
-                            'source': album.get('source', 'spotify'),
-                            'category': 'MUSIQUE',
-                            'category_display': 'Musique',
-                            'title': album.get('title', ''),
-                            'description': album.get('description', ''),
-                            'poster_url': album.get('poster_url'),
-                            'release_date': album.get('release_date', '')
-                        })
+                # Utiliser une recherche avec des termes populaires comme alternative
+                popular_queries = ["pop", "rock", "hip hop", "electronic", "jazz"]
+                for query in popular_queries[:2]:  # Limiter à 2 requêtes
+                    try:
+                        albums = spotify.search_albums(query, limit=limit//2)
+                        for album in albums[:limit//2]:  # Limiter encore plus
+                            if isinstance(album, dict) and album.get('external_id'):
+                                results.append({
+                                    'external_id': album.get('external_id'),
+                                    'source': album.get('source', 'spotify'),
+                                    'category': 'MUSIQUE',
+                                    'category_display': 'Musique',
+                                    'title': album.get('title', ''),
+                                    'description': album.get('description', ''),
+                                    'poster_url': album.get('poster_url'),
+                                    'release_date': album.get('release_date', '')
+                                })
+                            if len(results) >= limit:
+                                break
+                    except Exception as query_error:
+                        logger.error(f"Spotify query '{query}' error: {query_error}")
+                        continue
+                    if len(results) >= limit:
+                        break
             except Exception as e:
                 logger.error(f"Spotify trending error: {e}")
                 
