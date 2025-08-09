@@ -942,42 +942,43 @@ def get_trending_external(request):
                     'release_date': show.get('first_air_date', '')
                 })
         
-        if not category or category == 'MUSIQUE':
+        if category == 'MUSIQUE':
             try:
                 spotify = SpotifyService()
-                featured_albums = spotify.get_featured_playlists(limit=limit//4 if not category else limit)
-                for playlist in featured_albums:
-                    results.append({
-                        'external_id': playlist.get('id'),
-                        'source': 'spotify',
-                        'category': 'MUSIQUE',
-                        'category_display': 'Musique',
-                        'title': playlist.get('name', ''),
-                        'description': playlist.get('description', ''),
-                        'poster_url': playlist.get('images', [{}])[0].get('url') if playlist.get('images') else None,
-                        'release_date': ''
-                    })
+                featured_albums = spotify.get_featured_playlists(limit=limit)
+                for album in featured_albums:
+                    if isinstance(album, dict) and album.get('external_id'):
+                        results.append({
+                            'external_id': album.get('external_id'),
+                            'source': album.get('source', 'spotify'),
+                            'category': 'MUSIQUE',
+                            'category_display': 'Musique',
+                            'title': album.get('title', ''),
+                            'description': album.get('description', ''),
+                            'poster_url': album.get('poster_url'),
+                            'release_date': album.get('release_date', '')
+                        })
             except Exception as e:
                 logger.error(f"Spotify trending error: {e}")
                 
-        if not category or category == 'LIVRES':
+        if category == 'LIVRES':
             try:
                 books = BooksService()
-                # Pour les tendances, rechercher des livres populaires
-                trending_books = books.search_books("bestseller", limit=limit//4 if not category else limit)
+                # Pour les tendances, utiliser get_popular_books qui retourne des données formatées
+                trending_books = books.get_popular_books(limit=limit)
                 for book in trending_books:
-                    volume_info = book.get('volumeInfo', {})
-                    results.append({
-                        'external_id': book.get('id'),
-                        'source': 'google_books',
-                        'category': 'LIVRES',
-                        'category_display': 'Livres',
-                        'title': volume_info.get('title', ''),
-                        'description': volume_info.get('description', '')[:200] + '...' if volume_info.get('description', '') else '',
-                        'poster_url': volume_info.get('imageLinks', {}).get('thumbnail'),
-                        'release_date': volume_info.get('publishedDate', ''),
-                        'authors': volume_info.get('authors', [])
-                    })
+                    if isinstance(book, dict) and book.get('external_id'):
+                        results.append({
+                            'external_id': book.get('external_id'),
+                            'source': book.get('source', 'google_books'),
+                            'category': 'LIVRES',
+                            'category_display': 'Livres',
+                            'title': book.get('title', ''),
+                            'description': book.get('description', ''),
+                            'poster_url': book.get('poster_url'),
+                            'release_date': book.get('published_date', ''),
+                            'authors': book.get('authors', [])
+                        })
             except Exception as e:
                 logger.error(f"Google Books trending error: {e}")
                 

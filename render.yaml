@@ -51,7 +51,7 @@ services:
 
   # Service Frontend (React App)
   # Déployé comme un site statique pour la simplicité et la performance.
-  - type: static site # CORRECTION: "static site" au lieu de "static"
+  - type: static_site # Correction : "static_site" au lieu de "static" ou "static site"
     name: frontend
     plan: free
     region: frankfurt

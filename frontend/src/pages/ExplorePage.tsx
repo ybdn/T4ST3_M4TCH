@@ -225,9 +225,11 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
                             </div>
                           ))
                         ) : (
-                          trending.map((item) => (
+                          trending
+                            .filter((item) => item.external_id && item.title) // Filtrer les items invalides
+                            .map((item, index) => (
                             <div 
-                              key={`${item.source}-${item.external_id}`} 
+                              key={`${item.source}-${item.external_id}-${index}`} 
                               className="tm-glass rounded-xl overflow-hidden group hover:scale-[1.02] transition-all duration-300 flex flex-col flex-shrink-0 w-64 h-96"
                               style={{
                                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 12px rgba(255, 255, 255, 0.05)'

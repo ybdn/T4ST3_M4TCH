@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext.tsx';
 import AppHeader from '../components/AppHeader';
 import AppBottomNav from '../components/AppBottomNav';
 import FloatingAddButton from '../components/FloatingAddButton';
-import ExternalSearchBar from '../components/ExternalSearchBar';
 
 interface TasteList {
   id: number;
@@ -38,16 +37,6 @@ interface ListItem {
   };
 }
 
-interface ExternalSearchResult {
-  external_id: string;
-  source: string;
-  category: string;
-  category_display: string;
-  title: string;
-  description?: string;
-  poster_url?: string;
-  release_date?: string;
-}
 
 interface ListsPageProps {
   onNavigate?: (section: string, params?: any) => void;
@@ -64,8 +53,6 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const [selectedItem, setSelectedItem] = useState<ListItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
-  const [searchSuggestionsVisible, setSearchSuggestionsVisible] = useState(false);
-  const [searchResultsCount, setSearchResultsCount] = useState(0);
   const { } = useAuth();
 
   const handleBottomNavChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -139,39 +126,6 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
     return categoryData?.list?.id || 0;
   };
 
-  const handleAddFromSearch = async (result: ExternalSearchResult) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/import/external/', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          external_id: result.external_id,
-          source: result.source,
-          category: result.category,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erreur lors de l\'ajout');
-      }
-
-      // Rafraîchir les listes après ajout réussi
-      fetchLists();
-      setTimeout(() => {
-        if (Object.keys(categories).length > 0) {
-          fetchAllItems(selectedCategory);
-        }
-      }, 500);
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
-      // TODO: Afficher une notification d'erreur
-    }
-  };
 
   const categories_config = [
     { key: 'all', label: 'Tous' },
