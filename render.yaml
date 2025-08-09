@@ -10,13 +10,13 @@ services:
   # Service Backend (Django API)
   - type: web
     name: tastematch-backend
-    runtime: python
+    runtime: docker
     plan: free
     region: frankfurt
     
-    # Code source et build
-    rootDir: ./backend
-    buildCommand: "pip install -r requirements.txt"
+    # Configuration Docker
+    dockerContext: .
+    dockerfilePath: ./.docker/backend/Dockerfile
     startCommand: "python manage.py migrate && gunicorn tastematch_api.wsgi:application --host 0.0.0.0 --port $PORT"
 
     # Variables d'environnement
