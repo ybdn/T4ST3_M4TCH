@@ -140,7 +140,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const fetchLists = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('${API_BASE_URL}/lists/by_category/', {
+      const response = await fetch(`${API_BASE_URL}/lists/by_category/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
