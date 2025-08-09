@@ -84,12 +84,10 @@ services:
         fromService:
           type: web
           name: tastematch-api
-          property: host
+          property: hostport
 
 # Base de données PostgreSQL
 databases:
   - name: tastematch-db
     plan: free
     region: frankfurt
-    # Version spécifique pour éviter les conflits
-    version: "16"
