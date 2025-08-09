@@ -47,7 +47,6 @@ services:
   - type: web
     name: tastematch-frontend
     runtime: static
-    plan: free
 
     # Code source et build
     rootDir: ./frontend
