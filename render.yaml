@@ -14,10 +14,17 @@ services:
     plan: starter
     region: frankfurt
     
+    # Identifiant unique pour éviter les doublons
+    repo: https://github.com/ybdn/T4ST3_M4TCH.git
+    branch: main
+    
     # Configuration Docker
     dockerContext: .
     dockerfilePath: ./.docker/backend/Dockerfile
-    dockerCommand: sh -c "python manage.py migrate && gunicorn tastematch_api.wsgi:application --bind 0.0.0.0:$PORT"
+    
+    # Commandes séparées pour éviter les conflits
+    preDeployCommand: python manage.py migrate
+    dockerCommand: gunicorn tastematch_api.wsgi:application --bind 0.0.0.0:$PORT
     
     # Variables d'environnement
     envVars:
@@ -32,7 +39,10 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1"
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://tastematch-app.onrender.com,http://localhost:3000"
+        fromService:
+          type: web
+          name: tastematch-app
+          envVarKey: RENDER_EXTERNAL_URL
       # Variables sensibles à ajouter manuellement dans Render
       - key: SPOTIFY_CLIENT_ID
         sync: false
@@ -47,6 +57,10 @@ services:
   - type: web
     name: tastematch-app
     runtime: static
+    
+    # Identifiant unique pour éviter les doublons
+    repo: https://github.com/ybdn/T4ST3_M4TCH.git
+    branch: main
 
     # Code source et build
     rootDir: ./frontend
@@ -70,10 +84,12 @@ services:
         fromService:
           type: web
           name: tastematch-api
-          property: hostport
+          property: host
 
 # Base de données PostgreSQL
 databases:
   - name: tastematch-db
     plan: free
     region: frankfurt
+    # Version spécifique pour éviter les conflits
+    version: "16"
