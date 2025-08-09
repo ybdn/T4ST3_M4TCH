@@ -11,7 +11,7 @@ services:
   - type: web
     name: tastematch-backend
     runtime: python
-    plan: free
+    plan: starter
     region: frankfurt
     
     # Code source et build
