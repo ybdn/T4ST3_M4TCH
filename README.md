@@ -6,23 +6,15 @@ Ce projet vise à créer une application sociale engageante où l'interaction pr
 
 ## 📖 Table des matières
 
-- [🎯 À propos du projet](#-à-propos-du-projet)
+- [🎯 À propos du projet](#à-propos-du-projet)
   - [Proposition de valeur unique](#proposition-de-valeur-unique)
   - [Audience cible](#audience-cible)
-- [✨ Fonctionnalités clés](#-fonctionnalités-clés)
+- [✨ Fonctionnalités implémentées](#fonctionnalités-implémentées)
 - [🛠️ Stack technologique](#stack-technologique)
 - [🏗️ Architecture](#architecture)
 - [🌐 Déploiement et Environnement de Production](#-déploiement-et-environnement-de-production)
-- [🚀 Feuille de route du projet](#feuille-de-route-du-projet)
-- [🔒 Sécurité (Approche DevSecOps)](#sécurité-approche-devsecops)
-- [🏁 Démarrage rapide](#démarrage-rapide)
-- [📊 Indicateurs clés de performance (KPIs)](#indicateurs-clés-de-performance-kpis)
-- [⚖️ Légalité et conformité](#légalité-et-conformité)
-- [🤝 Contribution](#contribution)
-- [📄 Licence](#licence)
-- [🙏 Remerciements](#remerciements)
 
-## 🎯 À propos du projet
+## À propos du projet
 
 Taste Match est né d'un constat simple : les plateformes culturelles existantes comme Letterboxd ou Goodreads sont excellentes pour le catalogage passif, mais manquent d'interaction sociale directe, synchrone et ludique. Taste Match comble cette lacune en ne se contentant pas de permettre la comparaison, mais en la **provoquant** à travers un défi.
 
@@ -44,15 +36,17 @@ La conception s'adresse à plusieurs types d'utilisateurs :
 2. **La Cinéphile Passionnée (Chloé) :** Utilise l'application pour démontrer son expertise et défier les membres de son ciné-club avec des listes pointues.
 3. **L'Organisatrice Sociale (Maria) :** Gère des clubs (lecture, jeux) et utilise l'application pour engager sa communauté et prendre des décisions de groupe.
 
-## ✨ Fonctionnalités implémentées
+## Fonctionnalités implémentées
 
 ### 🎯 Fonctionnalités Core
+
 - **Système d'authentification JWT** : Inscription et connexion sécurisées
 - **Gestion des listes culturelles** : Création automatique de listes par catégorie (Films, Séries, Musique, Livres)
 - **Recherche et ajout externe** : Intégration avec TMDB (films/séries), Spotify (musique) et Google Books (livres)
 - **Interface utilisateur moderne** : Design responsive avec Material-UI et Tailwind CSS
 
 ### 📱 Pages et Navigation  
+
 - **Page Accueil** : Vue d'ensemble des activités récentes
 - **Page Découvrir** : Exploration de contenus tendance avec suggestions personnalisées
 - **Page Match** : Interface de comparaison de goûts (en développement)
@@ -60,25 +54,28 @@ La conception s'adresse à plusieurs types d'utilisateurs :
 - **Page Profil** : Gestion du compte utilisateur
 
 ### 🔍 Recherche et Découverte
+
 - **Barre de recherche intelligente** : Recherche en temps réel dans les APIs externes
 - **Contenu tendance** : Suggestions populaires depuis TMDB, Spotify et Google Books
 - **Ajout rapide** : Import direct depuis les résultats de recherche vers les listes
 - **Métadonnées enrichies** : Images, descriptions, notes et informations détaillées
 
 ### 🎨 Expérience Utilisateur
+
 - **Design glassmorphism** : Interface moderne avec effets de transparence
 - **Navigation fluide** : Navigation bottom pour mobile avec transitions animées
 - **Feedback visuel** : Animations et états de chargement pour une expérience optimale
 - **Gestion d'erreurs** : Messages d'erreur contextuels et fallbacks gracieux
 
 ### 🔮 Fonctionnalités à venir
+
 - **Mécanique de "Match" gamifiée** : Algorithme de compatibilité avec scoring
 - **Défis de groupe** : Comparaisons multi-utilisateurs
 - **Écran de résultats viral** : Partage de résultats avec visualisations
 - **Listes collaboratives** : Création de listes à plusieurs
 - **Système de badges et succès** : Gamification de l'engagement
 
-## 🛠️ Stack technologique
+## Stack technologique
 
 La stack est choisie pour une architecture découplée, moderne et scalable, prête pour une application web interactive.
 
@@ -110,11 +107,11 @@ La stack est choisie pour une architecture découplée, moderne et scalable, pr�
 - 🔄 **Tests** : Tests unitaires backend partiels
 - ⏳ **Déploiement prod** : Configuration Docker prête
 
-## 🏗️ Architecture
+## Architecture
 
 L'architecture est découplée (headless), avec un frontend React et un backend Django qui communiquent via une API REST.
 
-```
+```bash
 ┌─────────────────┐    HTTP/JSON     ┌──────────────────┐
 │   Frontend      │ ◄──────────────► │   Backend API    │
 │   (React)       │                  │   (Django DRF)   │
@@ -141,36 +138,38 @@ L'application est déployée sur **Render**, une plateforme cloud moderne qui si
 ### Services sur Render
 
 Le projet est divisé en trois services principaux sur Render :
-1.  **Frontend (Web Service)** : Sert l'application React. C'est le service exposé publiquement.
-2.  **Backend (Web Service)** : Fait tourner l'API Django. Il communique avec le frontend et la base de données.
-3.  **Database (PostgreSQL)** : La base de données managée par Render. Elle n'est accessible que par le service backend via le réseau privé de Render.
+
+1. **Frontend (Web Service)** : Sert l'application React. C'est le service exposé publiquement.
+2. **Backend (Web Service)** : Fait tourner l'API Django. Il communique avec le frontend et la base de données.
+3. **Database (PostgreSQL)** : La base de données managée par Render. Elle n'est accessible que par le service backend via le réseau privé de Render.
 
 ### Configuration d'un Domaine Personnalisé
 
 Pour rendre l'application accessible via un nom de domaine personnalisé (ex: `t4st3m4tch.ybdn.fr`), voici les étapes clés :
 
-1.  **Côté Render (Service Frontend)** :
-    *   Dans les paramètres du service frontend, allez dans la section **"Custom Domains"**.
-    *   Ajoutez votre nom de domaine complet (ex: `t4st3m4tch.ybdn.fr`).
-    *   Render vous fournira une URL cible se terminant par `.onrender.com`.
+1. **Côté Render (Service Frontend)** :
+    - Dans les paramètres du service frontend, allez dans la section **"Custom Domains"**.
+    - Ajoutez votre nom de domaine complet (ex: `t4st3m4tch.ybdn.fr`).
+    - Render vous fournira une URL cible se terminant par `.onrender.com`.
 
-2.  **Côté Fournisseur DNS (ex: OVH, Gandi, GoDaddy)** :
-    *   Accédez à la gestion de la zone DNS de votre nom de domaine.
-    *   Créez un nouvel enregistrement de type **`CNAME`**.
-    *   Configurez cet enregistrement pour faire pointer votre sous-domaine (ex: `t4st3m4tch`) vers l'URL cible fournie par Render à l'étape précédente.
+2. **Côté Fournisseur DNS (ex: OVH, Gandi, GoDaddy)** :
+    - Accédez à la gestion de la zone DNS de votre nom de domaine.
+    - Créez un nouvel enregistrement de type **`CNAME`**.
+    - Configurez cet enregistrement pour faire pointer votre sous-domaine (ex: `t4st3m4tch`) vers l'URL cible fournie par Render à l'étape précédente.
 
-3.  **Côté Render (Service Backend) - Crucial pour CORS** :
-    *   Le frontend (servi depuis votre nouveau domaine) et le backend (servi depuis une URL `.onrender.com`) n'ont pas la même "origine". Pour autoriser la communication entre eux, il est impératif de mettre à jour la configuration CORS du backend.
-    *   Dans les paramètres du service backend sur Render, allez dans la section **"Environment"**.
-    *   Ajoutez ou modifiez la variable d'environnement `CORS_ALLOWED_ORIGINS`.
-    *   Assurez-vous que cette variable contienne l'URL de votre frontend, préfixée par `https://` (ex: `https://t4st3m4tch.ybdn.fr`). Si plusieurs domaines sont nécessaires, séparez-les par une virgule.
-    *   Exemple de valeur : `https://tastematch-app.onrender.com,https://t4st3m4tch.ybdn.fr`
+3. **Côté Render (Service Backend) - Crucial pour CORS** :
+    - Le frontend (servi depuis votre nouveau domaine) et le backend (servi depuis une URL `.onrender.com`) n'ont pas la même "origine". Pour autoriser la communication entre eux, il est impératif de mettre à jour la configuration CORS du backend.
+    - Dans les paramètres du service backend sur Render, allez dans la section **"Environment"**.
+    - Ajoutez ou modifiez la variable d'environnement `CORS_ALLOWED_ORIGINS`.
+    - Assurez-vous que cette variable contienne l'URL de votre frontend, préfixée par `https://` (ex: `https://t4st3m4tch.ybdn.fr`). Si plusieurs domaines sont nécessaires, séparez-les par une virgule.
+    - Exemple de valeur : `https://tastematch-app.onrender.com,https://t4st3m4tch.ybdn.fr`
 
 Après avoir sauvegardé les variables d'environnement, Render redéploiera automatiquement le service backend avec la nouvelle configuration, résolvant ainsi les erreurs CORS.
 
 ## 🏁 Démarrage rapide
 
 ### Prérequis
+
 - **Docker & Docker Compose** : Pour l'environnement de développement
 - **Node.js 18+** : Pour le développement frontend
 - **Python 3.11+** : Pour le développement backend
@@ -217,8 +216,9 @@ docker-compose up -d
 ```
 
 **Services démarrés :**
-- **Frontend React** : http://localhost:3000
-- **Backend API** : http://localhost:8000
+
+- **Frontend React** : <http://localhost:3000>
+- **Backend API** : <http://localhost:8000>
 - **PostgreSQL** : localhost:5432
 - **Redis** : localhost:6379
 
@@ -235,7 +235,7 @@ docker-compose exec backend python manage.py createsuperuser
 
 ### 5. Accès à l'application
 
-1. **Frontend** : Ouvrir http://localhost:3000
+1. **Frontend** : Ouvrir <http://localhost:3000>
 2. **S'inscrire** ou se connecter
 3. **Explorer** les fonctionnalités :
    - Page Découvrir pour voir les tendances
