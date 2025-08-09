@@ -17,8 +17,7 @@ services:
     # Configuration Docker
     dockerContext: .
     dockerfilePath: ./.docker/backend/Dockerfile
-    preDeployCommand: python manage.py migrate
-    dockerCommand: gunicorn tastematch_api.wsgi:application --bind 0.0.0.0:$PORT
+    dockerCommand: sh -c "python manage.py migrate && gunicorn tastematch_api.wsgi:application --bind 0.0.0.0:$PORT"
     
     # Variables d'environnement
     envVars:
@@ -52,7 +51,7 @@ services:
     # Code source et build
     rootDir: ./frontend
     buildCommand: "npm ci && npm run build"
-    staticPublishPath: "./dist"
+    publishPath: "./dist"
 
     # Configuration SPA pour React Router
     headers:
