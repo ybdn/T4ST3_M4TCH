@@ -58,9 +58,8 @@ services:
     # Configuration SPA pour React Router
     headers:
       - path: /*
-        headers:
-          - name: Cache-Control
-            value: public, max-age=3600
+        name: Cache-Control
+        value: public, max-age=3600
     
     routes:
       - type: rewrite
@@ -73,11 +72,10 @@ services:
         fromService:
           type: web
           name: tastematch-backend
-          property: url
+          property: hostport
 
 # Base de données PostgreSQL
 databases:
   - name: tastematch-db
     plan: free
-    postgresMajorVersion: 15
     region: frankfurt
