@@ -10,7 +10,7 @@ services:
   # Service Backend (Django API)
   - type: web
     name: tastematch-backend
-    env: python3
+    runtime: python
     plan: free
     region: frankfurt
     
@@ -44,15 +44,16 @@ services:
         sync: false
 
   # Service Frontend (React App)
-  - type: static_site
+  - type: web
     name: tastematch-frontend
+    runtime: static
     plan: free
     region: frankfurt
     
     # Code source et build
     rootDir: ./frontend
     buildCommand: "npm install && npm run build"
-    publishPath: "./dist"
+    staticPublishPath: "./dist"
 
     # Configuration SPA pour React Router
     headers:
