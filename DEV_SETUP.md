@@ -76,6 +76,9 @@ VITE_API_URL=http://localhost:8000
 
 ### 1. Développement Local
 ```bash
+# Basculer sur la branche de développement
+git checkout dev
+
 # Démarrer l'env de dev
 ./scripts/dev-start.sh
 
@@ -97,12 +100,15 @@ cd frontend && npm run lint
 
 ### 3. Déploiement
 ```bash
-# Commit et push vers main
+# Commit sur dev
 git add .
 git commit -m "feat: nouvelle fonctionnalité"
-git push origin main
+git push origin dev
 
-# Render déploie automatiquement
+# Quand prêt pour production
+git checkout main
+git merge dev
+git push origin main  # Déclenche le déploiement Render
 ```
 
 ## 🛠️ Commandes Utiles
