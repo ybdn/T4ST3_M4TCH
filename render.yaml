@@ -17,7 +17,7 @@ services:
     # Configuration Docker
     dockerContext: .
     dockerfilePath: ./.docker/backend/Dockerfile
-    startCommand: "python manage.py migrate && gunicorn tastematch_api.wsgi:application --host 0.0.0.0 --port $PORT"
+    dockerCommand: "python manage.py migrate && gunicorn tastematch_api.wsgi:application --host 0.0.0.0 --port $PORT"
 
     # Variables d'environnement
     envVars:
@@ -48,8 +48,7 @@ services:
     name: tastematch-frontend
     runtime: static
     plan: free
-    region: frankfurt
-    
+        
     # Code source et build
     rootDir: ./frontend
     buildCommand: "npm ci && npm run build"
