@@ -65,7 +65,7 @@ services:
     # Code source et build
     rootDir: ./frontend
     buildCommand: "npm ci && npm run build"
-    publishPath: "./dist"
+    staticPublishPath: "./dist"
 
     # Configuration SPA pour React Router
     headers:
@@ -84,7 +84,7 @@ services:
         fromService:
           type: web
           name: tastematch-api
-          property: hostport
+          property: host
 
 # Base de données PostgreSQL
 databases:
