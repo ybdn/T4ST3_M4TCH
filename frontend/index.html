@@ -10,22 +10,24 @@
     <meta name="theme-color" content="#1976d2" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="T4ST3 M4TCH" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
     
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
     <!-- iOS Icons -->
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="apple-touch-icon" href="/vite.svg" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/vite.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/vite.svg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration - Désactivé temporairement pour iOS
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -39,5 +41,6 @@
         });
       }
     </script>
+    -->
   </body>
 </html>
