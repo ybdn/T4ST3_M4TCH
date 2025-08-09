@@ -43,13 +43,39 @@ La conception s'adresse à plusieurs types d'utilisateurs :
 2. **La Cinéphile Passionnée (Chloé) :** Utilise l'application pour démontrer son expertise et défier les membres de son ciné-club avec des listes pointues.
 3. **L'Organisatrice Sociale (Maria) :** Gère des clubs (lecture, jeux) et utilise l'application pour engager sa communauté et prendre des décisions de groupe.
 
-## ✨ Fonctionnalités clés
+## ✨ Fonctionnalités implémentées
 
-- **Parcours d'intégration optimisé :** Un processus d'inscription rapide pour guider l'utilisateur vers son premier "match" le plus vite possible, le "moment Aha!" de l'application.
-- **Création de listes expressives :** Les listes sont l'unité de base de la créativité de l'utilisateur. Des fonctionnalités comme les listes collaboratives et les modèles sont prévues.
-- **Mécanique de "Match" gamifiée :** Un algorithme calcule un score de compatibilité, enrichi par des éléments de jeu comme des séries (streaks), des badges/succès et des classements entre amis pour encourager l'engagement.
-- **Défis de groupe :** Un utilisateur peut défier un groupe entier, avec un écran de résultats affichant le score moyen et les classements individuels.
-- **Écran de résultats viral :** Conçu pour être partagé ! Il inclut non seulement le score, mais aussi des visualisations de données (diagramme de Venn) et des aperçus qualitatifs amusants. Il comporte un double appel à l'action crucial : **"Partager votre résultat"** et **"Le défier en retour !"** pour créer une boucle virale.
+### 🎯 Fonctionnalités Core
+- **Système d'authentification JWT** : Inscription et connexion sécurisées
+- **Gestion des listes culturelles** : Création automatique de listes par catégorie (Films, Séries, Musique, Livres)
+- **Recherche et ajout externe** : Intégration avec TMDB (films/séries), Spotify (musique) et Google Books (livres)
+- **Interface utilisateur moderne** : Design responsive avec Material-UI et Tailwind CSS
+
+### 📱 Pages et Navigation  
+- **Page Accueil** : Vue d'ensemble des activités récentes
+- **Page Découvrir** : Exploration de contenus tendance avec suggestions personnalisées
+- **Page Match** : Interface de comparaison de goûts (en développement)
+- **Page Listes** : Gestion complète des collections personnelles avec affichage par catégorie
+- **Page Profil** : Gestion du compte utilisateur
+
+### 🔍 Recherche et Découverte
+- **Barre de recherche intelligente** : Recherche en temps réel dans les APIs externes
+- **Contenu tendance** : Suggestions populaires depuis TMDB, Spotify et Google Books
+- **Ajout rapide** : Import direct depuis les résultats de recherche vers les listes
+- **Métadonnées enrichies** : Images, descriptions, notes et informations détaillées
+
+### 🎨 Expérience Utilisateur
+- **Design glassmorphism** : Interface moderne avec effets de transparence
+- **Navigation fluide** : Navigation bottom pour mobile avec transitions animées
+- **Feedback visuel** : Animations et états de chargement pour une expérience optimale
+- **Gestion d'erreurs** : Messages d'erreur contextuels et fallbacks gracieux
+
+### 🔮 Fonctionnalités à venir
+- **Mécanique de "Match" gamifiée** : Algorithme de compatibilité avec scoring
+- **Défis de groupe** : Comparaisons multi-utilisateurs
+- **Écran de résultats viral** : Partage de résultats avec visualisations
+- **Listes collaboratives** : Création de listes à plusieurs
+- **Système de badges et succès** : Gamification de l'engagement
 
 ## 🛠️ Stack technologique
 
@@ -64,6 +90,138 @@ La stack est choisie pour une architecture découplée, moderne et scalable, pr�
 | **File de Tâches**     | **Celery**                         | Permet d'exécuter des tâches longues en arrière-plan pour une expérience utilisateur fluide.                  |
 | **Déploiement**        | **Docker + Nginx**                 | Docker conteneurise l'environnement. Nginx sert le frontend React et agit comme reverse proxy pour l'API.     |
 
+### 🔗 APIs Externes Intégrées
+
+| Service              | Utilisation                     | Fonctionnalités                    |
+| :------------------- | :------------------------------ | :--------------------------------- |
+| **TMDB API**         | Films et séries                 | Recherche, métadonnées, images, tendances |
+| **Spotify Web API**  | Musique et albums              | Recherche d'albums, métadonnées artistiques |
+| **Google Books API** | Livres et littérature          | Recherche, couvertures, informations éditeur |
+
+### 🚀 État Technique Actuel
+
+- ✅ **Backend API** : Endpoints REST complets pour authentification, listes, recherche
+- ✅ **Frontend React** : Interface utilisateur responsive avec navigation SPA
+- ✅ **Intégrations externes** : TMDB, Spotify, Google Books fonctionnels
+- ✅ **Base de données** : Modèles Django pour utilisateurs, listes et références externes
+- ✅ **Cache et optimisations** : Redis pour mise en cache des APIs externes
+- ✅ **Authentification** : JWT avec refresh tokens
+- 🔄 **Tests** : Tests unitaires backend partiels
+- ⏳ **Déploiement prod** : Configuration Docker prête
+
 ## 🏗️ Architecture
 
 L'architecture est découplée (headless), avec un frontend React et un backend Django qui communiquent via une API REST.
+
+```
+┌─────────────────┐    HTTP/JSON     ┌──────────────────┐
+│   Frontend      │ ◄──────────────► │   Backend API    │
+│   (React)       │                  │   (Django DRF)   │
+│   Port 3000     │                  │   Port 8000      │
+└─────────────────┘                  └──────────────────┘
+                                              │
+                                              ▼
+                                     ┌──────────────────┐
+                                     │   PostgreSQL     │
+                                     │   Database       │
+                                     └──────────────────┘
+                                              │
+                                              ▼
+                                     ┌──────────────────┐
+                                     │   Redis Cache    │
+                                     │   (API Cache)    │
+                                     └──────────────────┘
+```
+
+## 🏁 Démarrage rapide
+
+### Prérequis
+- **Docker & Docker Compose** : Pour l'environnement de développement
+- **Node.js 18+** : Pour le développement frontend
+- **Python 3.11+** : Pour le développement backend
+- **Git** : Pour la gestion de version
+
+### 1. Clonage et configuration
+
+```bash
+# Cloner le repository
+git clone https://github.com/ybdn/T4ST3_M4TCH.git
+cd T4ST3_M4TCH
+
+# Copier les fichiers d'environnement
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env  # si nécessaire
+```
+
+### 2. Configuration des APIs externes (optionnel)
+
+Pour un fonctionnement optimal, configurez les clés API dans `backend/.env` :
+
+```env
+# TMDB (The Movie Database) - Films & Séries
+TMDB_API_KEY=your_tmdb_api_key
+
+# Spotify Web API - Musique
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+
+# Google Books API - Livres
+GOOGLE_BOOKS_API_KEY=your_google_books_api_key
+```
+
+> **Note** : L'application fonctionne sans ces clés mais avec des fonctionnalités limitées.
+
+### 3. Lancement avec Docker
+
+```bash
+# Lancer tous les services
+docker-compose up
+
+# En arrière-plan
+docker-compose up -d
+```
+
+**Services démarrés :**
+- **Frontend React** : http://localhost:3000
+- **Backend API** : http://localhost:8000
+- **PostgreSQL** : localhost:5432
+- **Redis** : localhost:6379
+
+### 4. Configuration initiale
+
+```bash
+# Créer les migrations
+docker-compose exec backend python manage.py makemigrations
+docker-compose exec backend python manage.py migrate
+
+# Créer un superutilisateur (optionnel)
+docker-compose exec backend python manage.py createsuperuser
+```
+
+### 5. Accès à l'application
+
+1. **Frontend** : Ouvrir http://localhost:3000
+2. **S'inscrire** ou se connecter
+3. **Explorer** les fonctionnalités :
+   - Page Découvrir pour voir les tendances
+   - Page Listes pour gérer vos collections
+   - Barre de recherche pour ajouter du contenu
+
+### Développement
+
+```bash
+# Frontend (développement avec hot reload)
+cd frontend
+npm install
+npm run dev
+
+# Backend (développement)
+cd backend
+python manage.py runserver 0.0.0.0:8000
+
+# Tests backend
+python manage.py test
+
+# Logs en temps réel
+docker-compose logs -f
+```
