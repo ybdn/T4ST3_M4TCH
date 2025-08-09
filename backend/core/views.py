@@ -841,18 +841,20 @@ def search_external(request):
         if not category or category == 'MUSIQUE' or not source or source == 'spotify':
             try:
                 spotify = SpotifyService()
-                albums = spotify.search_albums(query, limit=limit//4 if not category else limit)
-                for album in albums:
-                    if isinstance(album, dict):
+                # Recherche plus complète : morceaux et albums
+                music_results = spotify.search_music(query, limit=limit//4 if not category else limit)
+                for item in music_results:
+                    if isinstance(item, dict):
                         results.append({
-                            'external_id': album.get('external_id'),
-                            'source': album.get('source', 'spotify'),
+                            'external_id': item.get('external_id'),
+                            'source': item.get('source', 'spotify'),
                             'category': 'MUSIQUE',
                             'category_display': 'Musique',
-                            'title': album.get('title', ''),
-                            'description': album.get('description', ''),
-                            'poster_url': album.get('poster_url'),
-                            'release_date': album.get('release_date', '')
+                            'title': item.get('title', ''),
+                            'description': item.get('description', ''),
+                            'poster_url': item.get('poster_url'),
+                            'release_date': item.get('release_date', ''),
+                            'item_type': item.get('type')  # Ajout du type: track, album, artist
                         })
             except Exception as e:
                 logger.error(f"Spotify search error: {e}")
@@ -1052,19 +1054,37 @@ def import_from_external(request):
             tmdb = TMDBService()
             if category == 'FILMS':
                 details = tmdb.get_movie_details(external_id)
+                if not details:
+                    raise Exception('Film non trouvé sur TMDB.')
                 title = details.get('title', f'Film {external_id}')
-                description = details.get('overview', '')
+                description = details.get('description', '')
             else:  # SERIES
                 details = tmdb.get_tv_show_details(external_id)
-                title = details.get('name', f'Série {external_id}')
-                description = details.get('overview', '')
+                if not details:
+                    raise Exception('Série non trouvée sur TMDB.')
+                title = details.get('title', f'Série {external_id}')
+                description = details.get('description', '')
         elif source == 'spotify':
             from .services.spotify_service import SpotifyService
             spotify = SpotifyService()
-            details = spotify.get_album_details(external_id)
-            artists = ', '.join([artist.get('name', '') for artist in details.get('artists', [])])
-            title = f"{details.get('name', f'Album {external_id}')} - {artists}"
-            description = f"Album de {artists}"
+            
+            # Essayer de récupérer les détails en tant que morceau, puis en tant qu'album
+            details = spotify.get_track_details(external_id)
+            item_type = 'track'
+            if not details:
+                details = spotify.get_album_details(external_id)
+                item_type = 'album'
+
+            if not details:
+                raise Exception('Impossible de trouver les détails sur Spotify.')
+
+            artists = ', '.join(details.get('artists', []))
+            if item_type == 'track':
+                title = f"{details.get('title', '')} - {artists}"
+                description = f"Morceau de {artists} de l'album {details.get('album', '')}"
+            else: # album
+                title = f"{details.get('title', '')} - {artists}"
+                description = f"Album de {artists}"
         elif source == 'google_books':
             from .services.books_service import BooksService
             books = BooksService()

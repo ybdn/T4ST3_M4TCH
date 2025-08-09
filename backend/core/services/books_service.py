@@ -132,40 +132,22 @@ class BooksService:
         return results
     
     def _get_high_quality_cover_url(self, image_links: Dict) -> Optional[str]:
-        """Récupère l'URL de couverture en haute qualité en optimisant le paramètre zoom"""
+        """Récupère la meilleure URL de couverture disponible, sans la modifier."""
         if not image_links:
             return None
         
-        # Priorités des formats d'image (du meilleur au moins bon)
-        priority_order = ['large', 'medium', 'small', 'thumbnail']
+        # Ordre de préférence des formats d'image
+        priority_order = ['extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail']
         
-        cover_url = None
         for format_type in priority_order:
             if format_type in image_links:
                 cover_url = image_links[format_type]
-                break
+                # S'assurer que l'URL est en HTTPS
+                if cover_url.startswith('http://'):
+                    return cover_url.replace('http://', 'https://')
+                return cover_url
         
-        if not cover_url:
-            return None
-        
-        # Convertir en HTTPS si nécessaire
-        if cover_url.startswith('http://'):
-            cover_url = cover_url.replace('http://', 'https://')
-        
-        # Optimiser le paramètre zoom pour la meilleure qualité
-        if 'books.google.com' in cover_url and 'zoom=' in cover_url:
-            # Essayer d'abord zoom=0 pour la plus haute résolution
-            high_quality_url = cover_url.replace('zoom=1', 'zoom=0').replace('zoom=2', 'zoom=0').replace('zoom=3', 'zoom=0')
-            
-            # Si l'URL contenait déjà zoom=0, la garder telle quelle
-            if 'zoom=0' not in high_quality_url and 'zoom=' in cover_url:
-                # Remplacer le paramètre zoom existant par zoom=0
-                import re
-                high_quality_url = re.sub(r'zoom=\d+', 'zoom=0', cover_url)
-            
-            return high_quality_url
-        
-        return cover_url
+        return None
     
     def _get_google_book_by_isbn(self, isbn: str) -> Optional[Dict]:
         """Récupère un livre de Google Books par ISBN"""
