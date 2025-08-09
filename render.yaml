@@ -7,18 +7,17 @@
 # 3. Ajoutez les variables d'environnement sensibles dans le dashboard Render
 
 services:
-  # Service Backend (Django API)
+  # Service Backend (Django API) - Nouveaux noms pour éviter les conflits
   - type: web
-    name: tastematch-backend
+    name: tastematch-api
     runtime: docker
-    plan: starter
+    plan: free
     region: frankfurt
     
     # Configuration Docker
     dockerContext: .
     dockerfilePath: ./.docker/backend/Dockerfile
-    dockerCommand: "python manage.py migrate && gunicorn tastematch_api.wsgi:application --host 0.0.0.0 --port $PORT"
-
+    
     # Variables d'environnement
     envVars:
       - key: DATABASE_URL
@@ -32,7 +31,7 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1"
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://tastematch-frontend.onrender.com,http://localhost:3000"
+        value: "https://tastematch-app.onrender.com,http://localhost:3000"
       # Variables sensibles à ajouter manuellement dans Render
       - key: SPOTIFY_CLIENT_ID
         sync: false
@@ -43,10 +42,12 @@ services:
       - key: GOOGLE_BOOKS_API_KEY
         sync: false
 
-  # Service Frontend (React App)
+  # Service Frontend (React App) - Site statique
   - type: web
-    name: tastematch-frontend
+    name: tastematch-app
     runtime: static
+    plan: free
+    region: frankfurt
 
     # Code source et build
     rootDir: ./frontend
@@ -69,7 +70,7 @@ services:
       - key: VITE_API_URL
         fromService:
           type: web
-          name: tastematch-backend
+          name: tastematch-api
           property: hostport
 
 # Base de données PostgreSQL
