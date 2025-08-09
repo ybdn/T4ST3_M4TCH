@@ -34,7 +34,7 @@ services:
         fromService:
           type: web
           name: tastematch-app
-          property: host
+          property: url
       # Variables sensibles à ajouter manuellement dans Render
       - key: SPOTIFY_CLIENT_ID
         sync: false
