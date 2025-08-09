@@ -11,7 +11,7 @@ services:
   - type: web
     name: tastematch-backend
     runtime: python
-    plan: starter
+    plan: free
     region: frankfurt
     
     # Code source et build
@@ -47,9 +47,12 @@ services:
   - type: web
     name: tastematch-frontend
     runtime: static
+    plan: free
+    region: frankfurt
+    
     # Code source et build
     rootDir: ./frontend
-    buildCommand: "npm install && npm run build"
+    buildCommand: "npm ci && npm run build"
     staticPublishPath: "./dist"
 
     # Configuration SPA pour React Router
