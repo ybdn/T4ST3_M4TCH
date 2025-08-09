@@ -15,6 +15,31 @@
     -moz-osx-font-smoothing: grayscale;
     @apply bg-tm-bg text-tm-text;
     line-height: 1.5;
+    
+    /* PWA/Mobile optimizations - Hide browser chrome */
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-x pan-y;
+  }
+
+  /* iOS Safari optimizations */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      /* Fix iOS Safari bottom bar issue */
+      min-height: -webkit-fill-available;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+
+  /* PWA fullscreen optimizations */
+  @media (display-mode: standalone) {
+    body {
+      /* Additional space for notch/dynamic island */
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
   }
 
   #root {
