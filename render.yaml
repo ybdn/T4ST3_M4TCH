@@ -61,10 +61,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: tastematch-api
-          property: host
+        value: https://tastematch-api.onrender.com
 
 # Base de données PostgreSQL
 databases:
