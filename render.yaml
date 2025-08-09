@@ -30,8 +30,8 @@ services:
         value: "False"
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1"
-      - key: CORS_ALLOWED_ORIGIN_REGEX
-        value: "^https://.*\.onrender\.com$"
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://tastematch-app-62rq.onrender.com
       # Variables sensibles à ajouter manuellement dans Render
       - key: SPOTIFY_CLIENT_ID
         sync: false
