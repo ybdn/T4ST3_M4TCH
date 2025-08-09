@@ -42,7 +42,7 @@ services:
         fromService:
           type: web
           name: tastematch-app
-          envVarKey: RENDER_EXTERNAL_URL
+          property: host
       # Variables sensibles à ajouter manuellement dans Render
       - key: SPOTIFY_CLIENT_ID
         sync: false

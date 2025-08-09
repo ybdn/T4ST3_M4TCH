@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import AppHeader from '../components/AppHeader';
 import AppBottomNav from '../components/AppBottomNav';
 import FloatingAddButton from '../components/FloatingAddButton';
+import { API_BASE_URL } from '../config';
 
 interface TasteList {
   id: number;
@@ -75,7 +76,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const toggleWatched = async (item: ListItem) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/lists/${item.list_id || getListIdForItem(item)}/items/${item.id}/`, {
+      const response = await fetch(`${API_BASE_URL}/lists/${item.list_id || getListIdForItem(item)}/items/${item.id}/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -101,7 +102,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const deleteItem = async (item: ListItem) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/lists/${item.list_id || getListIdForItem(item)}/items/${item.id}/`, {
+      const response = await fetch(`${API_BASE_URL}/lists/${item.list_id || getListIdForItem(item)}/items/${item.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -139,7 +140,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
   const fetchLists = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/lists/by_category/', {
+      const response = await fetch('${API_BASE_URL}/lists/by_category/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -173,7 +174,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
         }
         
         if (categoryData.list) {
-          const response = await fetch(`http://localhost:8000/api/lists/${categoryData.list.id}/items/`, {
+          const response = await fetch(`${API_BASE_URL}/lists/${categoryData.list.id}/items/`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }

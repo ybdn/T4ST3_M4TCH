@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import ExternalSearchBar from '../components/ExternalSearchBar';
 import AppHeader from '../components/AppHeader';
 import AppBottomNav from '../components/AppBottomNav';
+import { API_BASE_URL } from '../config';
 
 // Types
 interface TrendingItem {
@@ -64,7 +65,7 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
         params.append('category', category);
       }
       params.append('limit', '10');
-      const response = await fetch(`http://localhost:8000/api/trending/external/?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/trending/external/?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -89,7 +90,7 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
 
   const handleAddFromTrending = async (item: TrendingItem | ExternalSearchResult) => {
     const token = localStorage.getItem('access_token');
-    const response = await fetch('http://localhost:8000/api/import/external/', {
+    const response = await fetch(`${API_BASE_URL}/import/external/`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

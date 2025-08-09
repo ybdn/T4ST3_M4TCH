@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import clsx from 'clsx';
+import { API_BASE_URL } from '../config';
 
 // --- Icônes SVG ---
 const SearchIcon = ({ className }: { className?: string }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> );
@@ -53,7 +54,7 @@ const ExternalSearchBar: React.FC<ExternalSearchBarProps> = ({
     setShowSuggestions(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/search/external/?q=${encodeURIComponent(searchQuery)}&limit=8`, {
+      const response = await fetch(`${API_BASE_URL}/search/external/?q=${encodeURIComponent(searchQuery)}&limit=8`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

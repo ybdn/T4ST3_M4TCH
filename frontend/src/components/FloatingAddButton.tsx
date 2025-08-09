@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import ExternalSearchBar from './ExternalSearchBar';
+import { API_BASE_URL } from '../config';
 
 interface ExternalSearchResult {
   external_id: string;
@@ -23,7 +24,7 @@ const FloatingAddButton: React.FC<FloatingAddButtonProps> = ({ onAdd }) => {
   const handleAddItem = async (result: ExternalSearchResult) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/import/external/', {
+      const response = await fetch(`${API_BASE_URL}/import/external/`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
