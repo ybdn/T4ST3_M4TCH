@@ -917,13 +917,13 @@ def get_trending_external(request):
             trending_movies = tmdb.get_trending_movies(limit=limit//4 if not category else limit)
             for movie in trending_movies:
                 results.append({
-                    'external_id': str(movie.get('id')),
-                    'source': 'tmdb',
+                    'external_id': movie.get('external_id'),
+                    'source': movie.get('source', 'tmdb'),
                     'category': 'FILMS',
                     'category_display': 'Films',
                     'title': movie.get('title', ''),
-                    'description': movie.get('overview', ''),
-                    'poster_url': f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get('poster_path') else None,
+                    'description': movie.get('description', ''),
+                    'poster_url': movie.get('poster_url'),
                     'release_date': movie.get('release_date', '')
                 })
         
@@ -932,13 +932,13 @@ def get_trending_external(request):
             trending_tv = tmdb.get_trending_tv_shows(limit=limit//4 if not category else limit)
             for show in trending_tv:
                 results.append({
-                    'external_id': str(show.get('id')),
-                    'source': 'tmdb',
+                    'external_id': show.get('external_id'),
+                    'source': show.get('source', 'tmdb'),
                     'category': 'SERIES',
                     'category_display': 'Séries',
-                    'title': show.get('name', ''),
-                    'description': show.get('overview', ''),
-                    'poster_url': f"https://image.tmdb.org/t/p/w500{show.get('poster_path')}" if show.get('poster_path') else None,
+                    'title': show.get('title', ''),
+                    'description': show.get('description', ''),
+                    'poster_url': show.get('poster_url'),
                     'release_date': show.get('first_air_date', '')
                 })
         

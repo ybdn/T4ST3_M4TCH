@@ -275,32 +275,6 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
             </p>
           </section>
 
-          {/* Barre de recherche pour ajout rapide */}
-          <section className={`tm-glass-card rounded-xl p-6 transition-all duration-300 ${
-            searchSuggestionsVisible ? 'min-h-[520px] relative z-20' : ''
-          }`}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="phi-subtitle font-cinzel text-tm-text">
-                Ajout rapide
-              </h2>
-              {searchResultsCount > 0 && (
-                <span className="flex items-center justify-center w-8 h-8 text-sm font-semibold text-tm-text-muted bg-white/10 rounded-full">
-                  {searchResultsCount}
-                </span>
-              )}
-            </div>
-            <p className="text-tm-text-muted text-sm mb-4 leading-relaxed">
-              Recherchez et ajoutez rapidement des films, séries, albums ou livres à vos listes.
-            </p>
-            <ExternalSearchBar
-              showSourceFilter
-              onSelect={handleAddFromSearch}
-              onQuickAdd={handleAddFromSearch}
-              placeholder="Rechercher un film, série, album, livre..."
-              onSuggestionsToggle={setSearchSuggestionsVisible}
-              onResultsCount={setSearchResultsCount}
-            />
-          </section>
 
           {error && (
             <div className="tm-glass border border-red-400/40 text-red-400 p-4 rounded-xl text-sm text-center" style={{

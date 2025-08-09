@@ -1,0 +1,86 @@
+# render.yaml
+#
+# Instructions :
+# 1. Placez ce fichier à la racine de votre dépôt GitHub.
+# 2. Ajoutez 'gunicorn' à votre fichier backend/requirements.txt. C'est un serveur web Python robuste pour la production.
+# 3. Poussez ces changements sur GitHub.
+# 4. Sur le tableau de bord de Render, créez une nouvelle "Blueprint Instance" et sélectionnez votre dépôt.
+#    Render lira ce fichier et configurera automatiquement tous les services.
+# 5. Après la création, allez dans l'onglet "Environment" de votre service 'backend'
+#    et ajoutez vos clés secrètes (SPOTIFY_CLIENT_ID, TMDB_API_KEY, etc.).
+
+services:
+  # Service Backend (Django API)
+  # Utilise l'environnement Docker que vous avez déjà défini.
+  - type: web
+    name: backend
+    env: docker
+    plan: free # Le plan gratuit est suffisant pour commencer
+    region: frankfurt # Choisissez la région la plus proche de vos utilisateurs
+    
+    # Configuration du build Docker
+    dockerContext: .
+    dockerfilePath: ./.docker/backend/Dockerfile
+
+    # Commande pour démarrer le service en production
+    # Elle exécute les migrations de base de données avant de lancer le serveur Gunicorn.
+    # Assurez-vous d'ajouter 'gunicorn' à backend/requirements.txt
+    startCommand: "python manage.py migrate && gunicorn tastematch_api.wsgi:application"
+
+    # Variables d'environnement
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tastematch-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true # Laisse Render générer une clé secrète sécurisée
+      - key: DEBUG
+        value: false
+      # IMPORTANT : Ajoutez vos autres secrets (clés d'API) directement
+      # dans le tableau de bord de Render pour plus de sécurité.
+      # Ils seront marqués comme "Not Synced".
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: TMDB_API_KEY
+        sync: false
+      - key: GOOGLE_BOOKS_API_KEY
+        sync: false
+
+  # Service Frontend (React App)
+  # Déployé comme un site statique pour la simplicité et la performance.
+  - type: static site # CORRECTION: "static site" au lieu de "static"
+    name: frontend
+    plan: free
+    region: frankfurt
+    
+    # Emplacement des sources du frontend
+    rootDir: ./frontend
+
+    # Commande pour construire l'application React
+    buildCommand: "npm install && npm run build"
+    
+    # Le dossier contenant les fichiers statiques après le build
+    publishPath: "./dist"
+
+    # Règle de réécriture pour les Single Page Applications (SPA) comme React,
+    # pour que le routage côté client fonctionne correctement.
+    rewrites:
+      - source: /*
+        destination: /index.html
+
+    # Variables d'environnement nécessaires au moment du build
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: backend
+          property: url # Injecte l'URL publique du service backend
+
+# Base de données PostgreSQL gérée par Render
+databases:
+  - name: tastematch-db
+    plan: free
+    postgresMajorVersion: 13
