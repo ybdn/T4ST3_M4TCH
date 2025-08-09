@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
 import AppBottomNav from '../components/AppBottomNav';
+import FloatingAddButton from '../components/FloatingAddButton';
 
 interface HomePageProps {
   onNavigate?: (section: string) => void;
@@ -143,26 +144,12 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               </div>
             </section>
 
-            {/* CTA Principal avec bouton verre premium */}
-            <section className="text-center">
-              <button
-                onClick={() => onNavigate?.('ajout')}
-                className="tm-glass-button phi-button inline-flex items-center justify-center gap-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 text-lg font-bold px-8 py-4 mb-4"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Ajout rapide
-              </button>
-              <p className="phi-description text-tm-text-muted max-w-md mx-auto">
-                Commencez par ajouter votre premier élément
-              </p>
-            </section>
 
           </div>
         </div>
 
       <AppBottomNav value={bottomNavValue} onChange={handleBottomNavChange} />
+      <FloatingAddButton />
     </div>
   );
 };

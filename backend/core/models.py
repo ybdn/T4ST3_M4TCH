@@ -65,6 +65,7 @@ class ListItem(models.Model):
     description = models.TextField(blank=True, verbose_name="Description/Commentaire")
     position = models.PositiveIntegerField(default=0, verbose_name="Position dans la liste")
     list = models.ForeignKey(List, on_delete=models.CASCADE, related_name='items', verbose_name="Liste")
+    is_watched = models.BooleanField(default=False, verbose_name="Vu/Lu")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date d'ajout")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
     

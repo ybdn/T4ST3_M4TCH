@@ -36,6 +36,8 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
   const [trending, setTrending] = useState<TrendingItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [searchSuggestionsVisible, setSearchSuggestionsVisible] = useState<boolean>(false);
+  const [searchResultsCount, setSearchResultsCount] = useState<number>(0);
 
   const handleBottomNavChange = (_event: React.SyntheticEvent, newValue: number) => {
     setBottomNavValue(newValue);
@@ -123,14 +125,25 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
           </section>
 
           {/* Barre de recherche */}
-          <section className="tm-glass-card rounded-xl p-6">
-            <h2 className="phi-subtitle font-cinzel text-tm-text mb-4">
-              Recherche externe
-            </h2>
+          <section className={`tm-glass-card rounded-xl p-6 transition-all duration-300 ${
+            searchSuggestionsVisible ? 'min-h-[520px] relative z-20' : ''
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="phi-subtitle font-cinzel text-tm-text">
+                Recherche externe
+              </h2>
+              {searchResultsCount > 0 && (
+                <span className="flex items-center justify-center w-8 h-8 text-sm font-semibold text-tm-text-muted bg-white/10 rounded-full">
+                  {searchResultsCount}
+                </span>
+              )}
+            </div>
             <ExternalSearchBar
               showSourceFilter
               onSelect={(r: ExternalSearchResult) => handleAddFromTrending(r)}
               onQuickAdd={(r: ExternalSearchResult) => handleAddFromTrending(r)}
+              onSuggestionsToggle={setSearchSuggestionsVisible}
+              onResultsCount={setSearchResultsCount}
             />
           </section>
 

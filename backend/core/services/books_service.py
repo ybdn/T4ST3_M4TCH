@@ -232,3 +232,17 @@ class BooksService:
             if identifier.get('type') in ['ISBN_10', 'ISBN_13']:
                 isbns.append(identifier.get('identifier'))
         return isbns
+    
+    def get_book_details(self, book_id: str) -> Optional[Dict]:
+        """Récupère les détails d'un livre par son ID Google Books"""
+        url = f"{self.GOOGLE_BOOKS_BASE_URL}/volumes/{book_id}"
+        params = {}
+        
+        if self.google_api_key:
+            params['key'] = self.google_api_key
+        
+        data = self._make_request(url, params)
+        
+        if data:
+            return data  # Retourner les données brutes de Google Books API
+        return None

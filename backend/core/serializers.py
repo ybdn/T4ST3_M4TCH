@@ -38,7 +38,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     external_ref = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = ListItem
-        fields = ('id', 'title', 'description', 'position', 'list', 'created_at', 'updated_at', 'external_ref')
+        fields = ('id', 'title', 'description', 'position', 'list', 'is_watched', 'created_at', 'updated_at', 'external_ref')
         read_only_fields = ('id', 'created_at', 'updated_at')
     
     def __init__(self, *args, **kwargs):

@@ -11,6 +11,9 @@ from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
 import json
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -511,65 +514,6 @@ def _get_generic_suggestions(query, category, limit):
 # EXTERNAL APIS ENDPOINTS
 # =====================================
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def search_external(request):
-    """
-    Recherche enrichie dans les APIs externes
-    Paramètres:
-    - q: terme de recherche
-    - category: filtre par catégorie (optionnel)
-    - source: filtre par API source (tmdb, spotify, books)
-    - limit: nombre max de résultats (défaut: 10)
-    """
-    query = request.GET.get('q', '').strip()
-    category = request.GET.get('category', '').strip()
-    source = request.GET.get('source', '').strip()
-    limit = min(int(request.GET.get('limit', 10)), 50)
-    
-    if not query or len(query) < 2:
-        return Response({'results': [], 'message': 'Requête trop courte'})
-    
-    try:
-        enrichment_service = ExternalEnrichmentService()
-        
-        # Recherche enrichie
-        if source:
-            # Recherche dans une API spécifique
-            if source == 'tmdb':
-                if category == 'FILMS':
-                    results = enrichment_service.tmdb.search_movies(query, limit)
-                elif category == 'SERIES':
-                    results = enrichment_service.tmdb.search_tv_shows(query, limit)
-                else:
-                    # Combiner films et séries
-                    movies = enrichment_service.tmdb.search_movies(query, limit // 2)
-                    shows = enrichment_service.tmdb.search_tv_shows(query, limit // 2)
-                    results = movies + shows
-            elif source == 'spotify':
-                results = enrichment_service.spotify.search_music(query, limit)
-            elif source == 'books':
-                results = enrichment_service.books.search_books(query, limit)
-            else:
-                return Response({'error': 'Source API non supportée'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            # Recherche globale
-            results = enrichment_service.search_external(query, category, limit)
-        
-        return Response({
-            'results': results,
-            'query': query,
-            'category': category,
-            'source': source,
-            'total': len(results)
-        })
-        
-    except Exception as e:
-        return Response(
-            {'error': f'Erreur lors de la recherche externe: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -831,5 +775,358 @@ def get_similar_suggestions(request, item_id):
     except Exception as e:
         return Response(
             {'error': f'Erreur lors de la récupération des suggestions: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_external(request):
+    """
+    Recherche dans les APIs externes (TMDB, Spotify, Google Books)
+    """
+    query = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    source = request.GET.get('source', '')  # tmdb, spotify, google_books
+    category = request.GET.get('category', '')  # FILMS, SERIES, MUSIQUE, LIVRES
+    
+    if not query:
+        return Response({
+            'results': [],
+            'query': query,
+            'category': category,
+            'source': source,
+            'total': 0
+        })
+    
+    results = []
+    
+    try:
+        # Import des services
+        from .services.tmdb_service import TMDBService
+        from .services.spotify_service import SpotifyService
+        from .services.books_service import BooksService
+        
+        # Rechercher selon la catégorie ou source spécifiée
+        if not category or category == 'FILMS' or not source or source == 'tmdb':
+            tmdb = TMDBService()
+            movies = tmdb.search_movies(query, limit=limit//4 if not category else limit)
+            for movie in movies:
+                results.append({
+                    'external_id': movie.get('external_id'),
+                    'source': movie.get('source', 'tmdb'),
+                    'category': 'FILMS',
+                    'category_display': 'Films',
+                    'title': movie.get('title', ''),
+                    'description': movie.get('description', ''),
+                    'poster_url': movie.get('poster_url'),
+                    'release_date': movie.get('release_date', '')
+                })
+        
+        if not category or category == 'SERIES' or not source or source == 'tmdb':
+            tmdb = TMDBService()
+            series = tmdb.search_tv_shows(query, limit=limit//4 if not category else limit)
+            for show in series:
+                results.append({
+                    'external_id': show.get('external_id'),
+                    'source': show.get('source', 'tmdb'),
+                    'category': 'SERIES',
+                    'category_display': 'Séries',
+                    'title': show.get('title', ''),
+                    'description': show.get('description', ''),
+                    'poster_url': show.get('poster_url'),
+                    'release_date': show.get('first_air_date', '')
+                })
+        
+        if not category or category == 'MUSIQUE' or not source or source == 'spotify':
+            try:
+                spotify = SpotifyService()
+                albums = spotify.search_albums(query, limit=limit//4 if not category else limit)
+                for album in albums:
+                    if isinstance(album, dict):
+                        results.append({
+                            'external_id': album.get('external_id'),
+                            'source': album.get('source', 'spotify'),
+                            'category': 'MUSIQUE',
+                            'category_display': 'Musique',
+                            'title': album.get('title', ''),
+                            'description': album.get('description', ''),
+                            'poster_url': album.get('poster_url'),
+                            'release_date': album.get('release_date', '')
+                        })
+            except Exception as e:
+                logger.error(f"Spotify search error: {e}")
+        
+        if not category or category == 'LIVRES' or not source or source == 'google_books':
+            try:
+                books = BooksService()
+                book_results = books.search_books(query, limit=limit//4 if not category else limit)
+                for book in book_results:
+                    if isinstance(book, dict):
+                        results.append({
+                            'external_id': book.get('external_id'),
+                            'source': book.get('source', 'google_books'),
+                            'category': 'LIVRES',
+                            'category_display': 'Livres',
+                            'title': book.get('title', ''),
+                            'description': book.get('description', ''),
+                            'poster_url': book.get('poster_url'),
+                            'release_date': book.get('published_date', ''),
+                            'authors': book.get('authors', [])
+                        })
+            except Exception as e:
+                logger.error(f"Google Books search error: {e}")
+                
+    except Exception as e:
+        logger.error(f"External search error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la recherche: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+    # Limiter les résultats
+    results = results[:limit]
+    
+    return Response({
+        'results': results,
+        'query': query,
+        'category': category,
+        'source': source,
+        'total': len(results)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_trending_external(request):
+    """
+    Récupère le contenu tendance depuis les APIs externes
+    """
+    category = request.GET.get('category', '')
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    
+    results = []
+    
+    try:
+        from .services.tmdb_service import TMDBService
+        from .services.spotify_service import SpotifyService
+        from .services.books_service import BooksService
+        
+        if not category or category == 'FILMS':
+            tmdb = TMDBService()
+            trending_movies = tmdb.get_trending_movies(limit=limit//4 if not category else limit)
+            for movie in trending_movies:
+                results.append({
+                    'external_id': str(movie.get('id')),
+                    'source': 'tmdb',
+                    'category': 'FILMS',
+                    'category_display': 'Films',
+                    'title': movie.get('title', ''),
+                    'description': movie.get('overview', ''),
+                    'poster_url': f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get('poster_path') else None,
+                    'release_date': movie.get('release_date', '')
+                })
+        
+        if not category or category == 'SERIES':
+            tmdb = TMDBService()
+            trending_tv = tmdb.get_trending_tv_shows(limit=limit//4 if not category else limit)
+            for show in trending_tv:
+                results.append({
+                    'external_id': str(show.get('id')),
+                    'source': 'tmdb',
+                    'category': 'SERIES',
+                    'category_display': 'Séries',
+                    'title': show.get('name', ''),
+                    'description': show.get('overview', ''),
+                    'poster_url': f"https://image.tmdb.org/t/p/w500{show.get('poster_path')}" if show.get('poster_path') else None,
+                    'release_date': show.get('first_air_date', '')
+                })
+        
+        if not category or category == 'MUSIQUE':
+            try:
+                spotify = SpotifyService()
+                featured_albums = spotify.get_featured_playlists(limit=limit//4 if not category else limit)
+                for playlist in featured_albums:
+                    results.append({
+                        'external_id': playlist.get('id'),
+                        'source': 'spotify',
+                        'category': 'MUSIQUE',
+                        'category_display': 'Musique',
+                        'title': playlist.get('name', ''),
+                        'description': playlist.get('description', ''),
+                        'poster_url': playlist.get('images', [{}])[0].get('url') if playlist.get('images') else None,
+                        'release_date': ''
+                    })
+            except Exception as e:
+                logger.error(f"Spotify trending error: {e}")
+                
+        if not category or category == 'LIVRES':
+            try:
+                books = BooksService()
+                # Pour les tendances, rechercher des livres populaires
+                trending_books = books.search_books("bestseller", limit=limit//4 if not category else limit)
+                for book in trending_books:
+                    volume_info = book.get('volumeInfo', {})
+                    results.append({
+                        'external_id': book.get('id'),
+                        'source': 'google_books',
+                        'category': 'LIVRES',
+                        'category_display': 'Livres',
+                        'title': volume_info.get('title', ''),
+                        'description': volume_info.get('description', '')[:200] + '...' if volume_info.get('description', '') else '',
+                        'poster_url': volume_info.get('imageLinks', {}).get('thumbnail'),
+                        'release_date': volume_info.get('publishedDate', ''),
+                        'authors': volume_info.get('authors', [])
+                    })
+            except Exception as e:
+                logger.error(f"Google Books trending error: {e}")
+                
+    except Exception as e:
+        logger.error(f"External trending error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des tendances: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+    # Limiter les résultats
+    results = results[:limit]
+    
+    return Response({
+        'results': results,
+        'category': category or 'all',
+        'total': len(results)
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_from_external(request):
+    """
+    Importe un élément depuis une API externe vers les listes de l'utilisateur
+    """
+    external_id = request.data.get('external_id')
+    source = request.data.get('source')
+    category = request.data.get('category')
+    
+    if not external_id or not source or not category:
+        return Response(
+            {'error': 'external_id, source et category sont obligatoires'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Créer ou récupérer la liste pour cette catégorie
+        list_obj, created = List.objects.get_or_create(
+            owner=request.user,
+            category=category,
+            defaults={
+                'name': List.get_default_name(category),
+                'description': List.get_default_description(category)
+            }
+        )
+        
+        # Déterminer le prochain numéro de position
+        max_position = ListItem.objects.filter(list=list_obj).aggregate(
+            max_pos=models.Max('position')
+        )['max_pos'] or 0
+        
+        # Récupérer les détails depuis l'API externe
+        from .services.external_enrichment_service import ExternalEnrichmentService
+        enrichment_service = ExternalEnrichmentService()
+        
+        # Créer l'élément de base avec des informations minimales
+        if source == 'tmdb':
+            from .services.tmdb_service import TMDBService
+            tmdb = TMDBService()
+            if category == 'FILMS':
+                details = tmdb.get_movie_details(external_id)
+                title = details.get('title', f'Film {external_id}')
+                description = details.get('overview', '')
+            else:  # SERIES
+                details = tmdb.get_tv_show_details(external_id)
+                title = details.get('name', f'Série {external_id}')
+                description = details.get('overview', '')
+        elif source == 'spotify':
+            from .services.spotify_service import SpotifyService
+            spotify = SpotifyService()
+            details = spotify.get_album_details(external_id)
+            artists = ', '.join([artist.get('name', '') for artist in details.get('artists', [])])
+            title = f"{details.get('name', f'Album {external_id}')} - {artists}"
+            description = f"Album de {artists}"
+        elif source == 'google_books':
+            from .services.books_service import BooksService
+            books = BooksService()
+            details = books.get_book_details(external_id)
+            volume_info = details.get('volumeInfo', {})
+            title = volume_info.get('title', f'Livre {external_id}')
+            authors = ', '.join(volume_info.get('authors', []))
+            description = f"Par {authors}" if authors else volume_info.get('description', '')[:100]
+        else:
+            title = f'Élément {external_id}'
+            description = f'Importé depuis {source}'
+        
+        # Créer l'élément de liste
+        list_item = ListItem.objects.create(
+            title=title,
+            description=description,
+            position=max_position + 1,
+            list=list_obj
+        )
+        
+        # Enrichir l'élément avec les données externes
+        enrichment_service.enrich_list_item(list_item, force_refresh=True)
+        
+        return Response({
+            'id': list_item.id,
+            'title': list_item.title,
+            'description': list_item.description,
+            'category': category,
+            'list_id': list_obj.id,
+            'external_id': external_id,
+            'source': source
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Import error: {e}")
+        return Response(
+            {'error': f'Erreur lors de l\'import: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_external_details(request, source, external_id):
+    """
+    Récupère les détails d'un élément depuis une API externe
+    """
+    try:
+        if source == 'tmdb':
+            from .services.tmdb_service import TMDBService
+            tmdb = TMDBService()
+            # Essayer d'abord comme un film, puis comme une série
+            details = tmdb.get_movie_details(external_id)
+            if not details:
+                details = tmdb.get_tv_show_details(external_id)
+        elif source == 'spotify':
+            from .services.spotify_service import SpotifyService
+            spotify = SpotifyService()
+            details = spotify.get_album_details(external_id)
+        elif source == 'google_books':
+            from .services.books_service import BooksService
+            books = BooksService()
+            details = books.get_book_details(external_id)
+        else:
+            return Response(
+                {'error': f'Source {source} non supportée'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return Response(details)
+        
+    except Exception as e:
+        logger.error(f"External details error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

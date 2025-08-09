@@ -13,4 +13,10 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
             return request.user.is_authenticated
         
         # Permissions d'écriture seulement pour le propriétaire de l'objet
-        return obj.owner == request.user
+        # Pour les ListItem, vérifier le propriétaire de la liste parent
+        if hasattr(obj, 'owner'):
+            return obj.owner == request.user
+        elif hasattr(obj, 'list') and hasattr(obj.list, 'owner'):
+            return obj.list.owner == request.user
+        else:
+            return False
