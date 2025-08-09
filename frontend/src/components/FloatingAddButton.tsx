@@ -80,48 +80,69 @@ const FloatingAddButton: React.FC<FloatingAddButtonProps> = ({ onAdd }) => {
 
       {/* Modal d'ajout rapide */}
       <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+        {/* Overlay d'assombrissement */}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300 ease-in-out" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <DialogPanel className={`tm-glass-card rounded-xl p-6 w-full mx-auto transition-all duration-300 ${
-            searchSuggestionsVisible ? 'max-w-3xl min-h-[510px]' : 'max-w-2xl'
-          }`}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <DialogTitle className="text-xl font-semibold text-white font-cinzel">
-                  Ajout rapide ⚡
-                </DialogTitle>
-                {searchResultsCount > 0 && (
-                  <span className="flex items-center justify-center w-8 h-8 text-sm font-semibold text-tm-text-muted bg-white/10 rounded-full">
-                    {searchResultsCount}
-                  </span>
-                )}
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="min-h-full flex flex-col">
+            {/* Header du modal */}
+            <div className={`bg-black/20 backdrop-blur-sm border-b border-white/10 transition-all duration-300 ${
+              searchSuggestionsVisible ? 'opacity-50' : 'opacity-100'
+            }`}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <DialogTitle className="text-xl font-semibold text-white font-cinzel">
+                      Ajout rapide ⚡
+                    </DialogTitle>
+                    {searchResultsCount > 0 && (
+                      <span className="flex items-center justify-center w-8 h-8 text-sm font-semibold text-tm-text-muted bg-white/10 rounded-full">
+                        {searchResultsCount}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="text-tm-text-muted hover:text-white transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-tm-text-muted hover:text-white transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
             
-            <div className="space-y-4">
-              <p className="text-tm-text-muted text-sm leading-relaxed">
-                Recherchez et ajoutez rapidement des films, séries, albums ou livres à vos listes.
-              </p>
-              
-              <ExternalSearchBar
-                showSourceFilter
-                onSelect={handleAddItem}
-                onQuickAdd={handleAddItem}
-                placeholder="Rechercher un film, série, album, livre..."
-                onSuggestionsToggle={setSearchSuggestionsVisible}
-                onResultsCount={setSearchResultsCount}
-              />
+            {/* Contenu du modal */}
+            <div className="flex-1 relative">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {/* Description */}
+                <div className={`mb-6 transition-all duration-300 ${
+                  searchSuggestionsVisible ? 'opacity-50 pointer-events-none' : 'opacity-100'
+                }`}>
+                  <p className="text-tm-text-muted text-sm leading-relaxed text-center">
+                    Recherchez et ajoutez rapidement des films, séries, albums ou livres à vos listes.
+                  </p>
+                </div>
+                
+                {/* Barre de recherche */}
+                <div className={`transition-all duration-300 ${
+                  searchSuggestionsVisible ? 'fixed top-20 left-0 right-0 z-20 px-4 sm:px-6 lg:px-8' : ''
+                }`}>
+                  <div className={searchSuggestionsVisible ? 'max-w-7xl mx-auto' : ''}>
+                    <ExternalSearchBar
+                      showSourceFilter
+                      onSelect={handleAddItem}
+                      onQuickAdd={handleAddItem}
+                      placeholder="Rechercher un film, série, album, livre..."
+                      onSuggestionsToggle={setSearchSuggestionsVisible}
+                      onResultsCount={setSearchResultsCount}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </DialogPanel>
+          </div>
         </div>
       </Dialog>
     </>

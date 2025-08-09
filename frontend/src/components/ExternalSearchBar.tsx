@@ -162,7 +162,7 @@ const ExternalSearchBar: React.FC<ExternalSearchBarProps> = ({
           leaveFrom="transform scale-100 opacity-100"
           leaveTo="transform scale-95 opacity-0"
         >
-          <Combobox.Options className="absolute z-10 mt-1 w-full tm-glass-card rounded-xl shadow-xl max-h-80 overflow-auto">
+          <Combobox.Options className="absolute z-10 mt-1 w-full tm-glass-card rounded-xl shadow-xl overflow-auto scrollbar-hide" style={{ maxHeight: 'calc(100vh - 240px)' }}>
             {results.length === 0 && query !== '' && !isLoading ? (
               <div className="p-4 text-center text-tm-text-muted">
                 Aucun résultat trouvé

@@ -16,6 +16,7 @@ interface MatchItem {
   category: string;
   compatibilityScore: number;
   reasons: string[];
+  poster_url?: string;
 }
 
 interface MatchPageProps {
@@ -34,7 +35,8 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
       description: 'Un chef-d\'œuvre visuel de science-fiction qui explore l\'humanité.',
       category: 'Films',
       compatibilityScore: 92,
-      reasons: ['Sci-Fi', 'Visuel époustouflant', 'Philosophique']
+      reasons: ['Sci-Fi', 'Visuel époustouflant', 'Philosophique'],
+      poster_url: 'https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg'
     },
     {
       id: '2',
@@ -42,7 +44,8 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
       description: 'Une série nostalgique qui mélange horreur et aventure.',
       category: 'Séries',
       compatibilityScore: 87,
-      reasons: ['Nostalgique', 'Mystère', 'Personnages attachants']
+      reasons: ['Nostalgique', 'Mystère', 'Personnages attachants'],
+      poster_url: 'https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg'
     },
     {
       id: '3',
@@ -50,7 +53,8 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
       description: 'L\'histoire captivante du groupe Queen et de Freddie Mercury.',
       category: 'Musique',
       compatibilityScore: 95,
-      reasons: ['Rock classique', 'Biopic', 'Performance épique']
+      reasons: ['Rock classique', 'Biopic', 'Performance épique'],
+      poster_url: 'https://i.scdn.co/image/ab67616d0000b2735e5c4ac5ff7b8217cf59c93e'
     }
   ];
 
@@ -87,52 +91,83 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
       <div className="h-[calc(100vh-9rem)] flex flex-col px-4 sm:px-6 lg:px-8">
         
         {/* Card de match - centrée et sans scroll */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-sm tm-glass-card rounded-xl p-6 text-center">
-            
-            {/* Score de compatibilité */}
-            <div className="mb-4">
-              <p className="text-5xl font-bold text-tm-primary mb-1">{currentItem.compatibilityScore}%</p>
-              <p className="text-xs text-tm-text-muted">Compatibilité</p>
-            </div>
-            
-            {/* Badge catégorie */}
-            <span className="inline-block px-3 py-1 text-xs font-semibold bg-tm-primary/20 text-tm-primary rounded-full mb-4">
-              {currentItem.category}
-            </span>
-            
-            {/* Titre */}
-            <h1 className="text-xl font-bold font-cinzel text-white mb-3">{currentItem.title}</h1>
-            
-            {/* Description */}
-            <p className="text-sm text-tm-text-muted mb-4 leading-relaxed line-clamp-3">{currentItem.description}</p>
-            
-            {/* Raisons du match */}
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-tm-text mb-2">Pourquoi ce match ?</h2>
-              <div className="flex flex-wrap justify-center gap-1">
-                {currentItem.reasons.map(reason => (
-                  <span key={reason} className="px-2 py-1 text-xs tm-glass rounded-full text-tm-text-muted">
-                    {reason}
-                  </span>
-                ))}
+        <div className="flex-1 flex items-center justify-center py-4">
+          <div className="w-full max-w-sm tm-glass-card rounded-xl overflow-hidden" style={{ height: '75vh', maxHeight: '600px' }}>            
+            {/* Image de couverture */}
+            <div className="relative h-1/2 overflow-hidden">
+              <img
+                src={currentItem.poster_url || '/vite.svg'}
+                alt={currentItem.title}
+                className="w-full h-full object-cover"
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => { 
+                  e.currentTarget.src = '/vite.svg'; 
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              
+              {/* Score de compatibilité en overlay */}
+              <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md rounded-full px-3 py-2">
+                <p className="text-2xl font-bold text-white">{currentItem.compatibilityScore}%</p>
+                <p className="text-xs text-white/80 text-center">Match</p>
+              </div>
+              
+              {/* Badge catégorie en overlay */}
+              <div className="absolute top-4 left-4">
+                <span className="px-3 py-1 text-xs font-semibold bg-tm-primary text-white rounded-full">
+                  {currentItem.category}
+                </span>
               </div>
             </div>
+            
+            {/* Contenu */}
+            <div className="h-1/2 p-6 flex flex-col justify-between text-center">
+              {/* Contenu principal */}
+              <div className="flex-1">
+                {/* Titre */}
+                <h1 className="text-xl font-bold font-cinzel text-white mb-2">{currentItem.title}</h1>
+                
+                {/* Description */}
+                <p className="text-sm text-tm-text-muted mb-3 leading-relaxed line-clamp-2">{currentItem.description}</p>
+                
+                {/* Raisons du match */}
+                <div className="mb-4">
+                  <h2 className="text-sm font-semibold text-tm-text mb-2">Pourquoi ce match ?</h2>
+                  <div className="flex flex-wrap justify-center gap-1">
+                    {currentItem.reasons.map(reason => (
+                      <span key={reason} className="px-2 py-1 text-xs tm-glass rounded-full text-tm-text-muted">
+                        {reason}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-            {/* Boutons d'action */}
-            <div className="flex gap-6 justify-center">
-              <button 
-                onClick={handleDislike} 
-                className="w-16 h-16 flex items-center justify-center bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/30 hover:scale-110 transition-all duration-200"
-              >
-                <ThumbDownIcon className="h-7 w-7" />
-              </button>
-              <button 
-                onClick={handleLike} 
-                className="w-16 h-16 flex items-center justify-center bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30 hover:scale-110 transition-all duration-200"
-              >
-                <ThumbUpIcon className="h-7 w-7" />
-              </button>
+              {/* Boutons d'action */}
+              <div className="flex gap-4 justify-center">
+                <button 
+                  onClick={handleDislike} 
+                  className="w-14 h-14 flex items-center justify-center bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/30 hover:scale-110 transition-all duration-200"
+                >
+                  <ThumbDownIcon className="h-6 w-6" />
+                </button>
+                <button 
+                  onClick={() => {
+                    // TODO: Implémenter l'ajout à la liste
+                    console.log('Ajouter à la liste:', currentItem.title);
+                  }} 
+                  className="w-14 h-14 flex items-center justify-center bg-blue-500/20 text-blue-400 rounded-full hover:bg-blue-500/30 hover:scale-110 transition-all duration-200"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+                <button 
+                  onClick={handleLike} 
+                  className="w-14 h-14 flex items-center justify-center bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30 hover:scale-110 transition-all duration-200"
+                >
+                  <ThumbUpIcon className="h-6 w-6" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
