@@ -112,44 +112,46 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
     <div className="min-h-screen tm-auth-bg font-inter">
       <AppHeader title="T4ST3 M4TCH" />
 
-      <div className="h-[calc(100vh-4rem)] overflow-y-auto pb-20">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="h-[calc(100vh-4rem)] overflow-y-auto pb-20 relative">
+        {/* Overlay d'assombrissement */}
+        {searchSuggestionsVisible && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-10 transition-all duration-300 ease-in-out"
+            style={{ top: '4rem' }}
+            onClick={() => setSearchSuggestionsVisible(false)}
+          />
+        )}
+        
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 relative">
           
           {/* Hero Section */}
-          <section className="text-center">
-            <h1 className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:phi-title font-cinzel text-white mb-4 break-words leading-tight">
-              Découvrez vos prochains coups de cœur ✨
+          <section className={`text-center transition-all duration-300 ${
+            searchSuggestionsVisible ? 'opacity-50 pointer-events-none' : 'opacity-100'
+          }`}>
+            <h1 className="text-lg sm:text-xl font-cinzel text-white mb-2 leading-tight">
+              Vos prochains coups de cœur ✨
             </h1>
-            <p className="text-sm sm:phi-description text-tm-text-muted leading-relaxed max-w-2xl mx-auto">
-              Explorez les tendances et trouvez votre prochain film, série, album ou livre préféré
-            </p>
           </section>
 
           {/* Barre de recherche */}
-          <section className={`tm-glass-card rounded-xl p-6 transition-all duration-300 ${
-            searchSuggestionsVisible ? 'min-h-[520px] relative z-20' : ''
+          <section className={`transition-all duration-300 ${
+            searchSuggestionsVisible ? 'fixed top-16 left-0 right-0 z-20 px-4 sm:px-6 lg:px-8' : ''
           }`}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="phi-subtitle font-cinzel text-tm-text">
-                Recherche externe
-              </h2>
-              {searchResultsCount > 0 && (
-                <span className="flex items-center justify-center w-8 h-8 text-sm font-semibold text-tm-text-muted bg-white/10 rounded-full">
-                  {searchResultsCount}
-                </span>
-              )}
+            <div className={searchSuggestionsVisible ? 'max-w-7xl mx-auto' : ''}>
+              <ExternalSearchBar
+                showSourceFilter
+                onSelect={(r: ExternalSearchResult) => handleAddFromTrending(r)}
+                onQuickAdd={(r: ExternalSearchResult) => handleAddFromTrending(r)}
+                onSuggestionsToggle={setSearchSuggestionsVisible}
+                onResultsCount={setSearchResultsCount}
+              />
             </div>
-            <ExternalSearchBar
-              showSourceFilter
-              onSelect={(r: ExternalSearchResult) => handleAddFromTrending(r)}
-              onQuickAdd={(r: ExternalSearchResult) => handleAddFromTrending(r)}
-              onSuggestionsToggle={setSearchSuggestionsVisible}
-              onResultsCount={setSearchResultsCount}
-            />
           </section>
 
           {/* Section Tendances avec TabGroup */}
-          <section className="tm-glass-card rounded-xl p-6">
+          <section className={`tm-glass-card rounded-xl p-6 transition-all duration-300 ${
+            searchSuggestionsVisible ? '-mt-4 opacity-50 pointer-events-none' : 'opacity-100'
+          }`}>
             <h2 className="phi-subtitle font-cinzel text-tm-text mb-6">
               Tendances
             </h2>
@@ -159,13 +161,13 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
               setSelectedCategory(categoryKey);
             }}>
               <div className="flex justify-between items-center mb-6">
-                <TabList className="flex gap-2 flex-wrap">
+                <TabList className="flex gap-1 overflow-x-auto scrollbar-hide flex-1 pr-2">
                   {categories.map((category) => (
                     <Tab
                       key={category.key}
                       className={({ selected, hover, focus }) =>
                         clsx(
-                          "relative rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 focus:outline-none",
+                          "relative rounded-full px-3 py-2 text-xs sm:text-sm font-semibold transition-all duration-300 focus:outline-none whitespace-nowrap flex-shrink-0",
                           {
                             // État non sélectionné
                             "text-tm-text-muted": !selected,
@@ -183,7 +185,7 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
                           <span className={clsx(
                             "relative z-10 drop-shadow-sm transition-all duration-300",
                             {
-                              "underline decoration-tm-primary decoration-2 underline-offset-4": selected
+                              "underline decoration-tm-primary decoration-2 underline-offset-2": selected
                             }
                           )}>
                             {category.label}
@@ -308,7 +310,9 @@ const ExplorePage: React.FC<ExplorePageProps> = ({ onNavigate }) => {
           </section>
 
           {/* Section Recommandations */}
-          <section className="tm-glass-card rounded-xl p-6">
+          <section className={`tm-glass-card rounded-xl p-6 transition-all duration-300 ${
+            searchSuggestionsVisible ? 'opacity-50 pointer-events-none' : 'opacity-100'
+          }`}>
             <h2 className="phi-subtitle font-cinzel text-tm-text mb-6">
               Recommandé pour vous
             </h2>

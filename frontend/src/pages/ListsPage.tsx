@@ -218,18 +218,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
       <AppHeader title="T4ST3 M4TCH" />
 
       <div className="h-[calc(100vh-4rem)] overflow-y-auto pb-20">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          
-          {/* Hero Section */}
-          <section className="text-center">
-            <h1 className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:phi-title font-cinzel text-white mb-4 break-words leading-tight">
-              Mes listes culturelles 📚
-            </h1>
-            <p className="text-sm sm:phi-description text-tm-text-muted leading-relaxed max-w-2xl mx-auto">
-              Retrouvez tous vos ajouts organisés par catégorie
-            </p>
-          </section>
-
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
 
           {error && (
             <div className="tm-glass border border-red-400/40 text-red-400 p-4 rounded-xl text-sm text-center" style={{
@@ -250,13 +239,13 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
                 setSelectedCategory(categoryKey);
               }}>
                 <div className="flex justify-between items-center mb-6">
-                  <TabList className="flex gap-2 flex-wrap">
+                  <TabList className="flex gap-1 overflow-x-auto scrollbar-hide flex-1 pr-2">
                     {categories_config.map((category) => (
                       <Tab
                         key={category.key}
                         className={({ selected, hover, focus }) =>
                           clsx(
-                            "relative rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 focus:outline-none",
+                            "relative rounded-full px-3 py-2 text-xs sm:text-sm font-semibold transition-all duration-300 focus:outline-none whitespace-nowrap flex-shrink-0",
                             {
                               // État non sélectionné
                               "text-tm-text-muted": !selected,
@@ -274,7 +263,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
                             <span className={clsx(
                               "relative z-10 drop-shadow-sm transition-all duration-300",
                               {
-                                "underline decoration-tm-primary decoration-2 underline-offset-4": selected
+                                "underline decoration-tm-primary decoration-2 underline-offset-2": selected
                               }
                             )}>
                               {category.label}
