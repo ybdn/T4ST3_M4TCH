@@ -161,6 +161,33 @@ Définies dans `src/index.css` (`--tm-*`) pour les valeurs globales comme les gr
 - Toujours renseigner `aria-label` sur les éléments interactifs sans texte (boutons avec icônes).
 - Utiliser les utilitaires `focus:` de Tailwind pour assurer des états de focus clairs.
 
+## 🌐 Connexion au Backend et Déploiement
+
+### Communication avec l'API
+Le frontend est découplé du backend et communique avec lui via des appels à une API REST. L'adresse de base de cette API est configurable via une variable d'environnement pour s'adapter à différents environnements (local, production).
+
+La logique de configuration se trouve dans `src/config.ts` et se base sur la variable `VITE_API_URL` fournie par Vite.
+
+### Développement Local
+Pour le développement local, le frontend doit pointer vers l'API qui tourne sur `localhost:8000`. Le code utilise cette adresse par défaut si `VITE_API_URL` n'est pas définie.
+
+Il est recommandé de créer un fichier `.env.local` à la racine du dossier `frontend/` pour spécifier explicitement l'URL :
+```env
+# frontend/.env.local
+VITE_API_URL=http://localhost:8000
+```
+
+### Environnement de Production (Render)
+Lorsque le frontend est déployé sur Render, il doit connaître l'adresse publique du service backend.
+1.  Allez dans les paramètres de votre service **frontend** sur Render.
+2.  Cliquez sur la section **"Environment"**.
+3.  Ajoutez ou modifiez la variable d'environnement :
+    *   **Key :** `VITE_API_URL`
+    *   **Value :** `https://tastematch-api.onrender.com` (ou l'URL publique de votre service backend).
+
+### Déploiement
+Le service est déployé sur Render. Pour la configuration d'un nom de domaine personnalisé, veuillez vous référer à la section `🌐 Déploiement et Environnement de Production` dans le `README.md` principal à la racine du projet.
+
 ## 🚀 Démarrage
 
 1. Installer les dépendances: `npm install`

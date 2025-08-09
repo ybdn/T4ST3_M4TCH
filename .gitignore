@@ -70,7 +70,7 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+# .env est gardé pour Docker Compose (sans vraies clés)
 .env.development.local
 .env.test.local
 .env.production.local

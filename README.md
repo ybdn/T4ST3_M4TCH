@@ -12,6 +12,7 @@ Ce projet vise à créer une application sociale engageante où l'interaction pr
 - [✨ Fonctionnalités clés](#-fonctionnalités-clés)
 - [🛠️ Stack technologique](#stack-technologique)
 - [🏗️ Architecture](#architecture)
+- [🌐 Déploiement et Environnement de Production](#-déploiement-et-environnement-de-production)
 - [🚀 Feuille de route du projet](#feuille-de-route-du-projet)
 - [🔒 Sécurité (Approche DevSecOps)](#sécurité-approche-devsecops)
 - [🏁 Démarrage rapide](#démarrage-rapide)
@@ -132,6 +133,40 @@ L'architecture est découplée (headless), avec un frontend React et un backend 
                                      │   (API Cache)    │
                                      └──────────────────┘
 ```
+
+## 🌐 Déploiement et Environnement de Production
+
+L'application est déployée sur **Render**, une plateforme cloud moderne qui simplifie la gestion d'applications conteneurisées.
+
+### Services sur Render
+
+Le projet est divisé en trois services principaux sur Render :
+1.  **Frontend (Web Service)** : Sert l'application React. C'est le service exposé publiquement.
+2.  **Backend (Web Service)** : Fait tourner l'API Django. Il communique avec le frontend et la base de données.
+3.  **Database (PostgreSQL)** : La base de données managée par Render. Elle n'est accessible que par le service backend via le réseau privé de Render.
+
+### Configuration d'un Domaine Personnalisé
+
+Pour rendre l'application accessible via un nom de domaine personnalisé (ex: `t4st3m4tch.ybdn.fr`), voici les étapes clés :
+
+1.  **Côté Render (Service Frontend)** :
+    *   Dans les paramètres du service frontend, allez dans la section **"Custom Domains"**.
+    *   Ajoutez votre nom de domaine complet (ex: `t4st3m4tch.ybdn.fr`).
+    *   Render vous fournira une URL cible se terminant par `.onrender.com`.
+
+2.  **Côté Fournisseur DNS (ex: OVH, Gandi, GoDaddy)** :
+    *   Accédez à la gestion de la zone DNS de votre nom de domaine.
+    *   Créez un nouvel enregistrement de type **`CNAME`**.
+    *   Configurez cet enregistrement pour faire pointer votre sous-domaine (ex: `t4st3m4tch`) vers l'URL cible fournie par Render à l'étape précédente.
+
+3.  **Côté Render (Service Backend) - Crucial pour CORS** :
+    *   Le frontend (servi depuis votre nouveau domaine) et le backend (servi depuis une URL `.onrender.com`) n'ont pas la même "origine". Pour autoriser la communication entre eux, il est impératif de mettre à jour la configuration CORS du backend.
+    *   Dans les paramètres du service backend sur Render, allez dans la section **"Environment"**.
+    *   Ajoutez ou modifiez la variable d'environnement `CORS_ALLOWED_ORIGINS`.
+    *   Assurez-vous que cette variable contienne l'URL de votre frontend, préfixée par `https://` (ex: `https://t4st3m4tch.ybdn.fr`). Si plusieurs domaines sont nécessaires, séparez-les par une virgule.
+    *   Exemple de valeur : `https://tastematch-app.onrender.com,https://t4st3m4tch.ybdn.fr`
+
+Après avoir sauvegardé les variables d'environnement, Render redéploiera automatiquement le service backend avec la nouvelle configuration, résolvant ainsi les erreurs CORS.
 
 ## 🏁 Démarrage rapide
 
