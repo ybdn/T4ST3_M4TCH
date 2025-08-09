@@ -11,7 +11,7 @@ services:
   - type: web
     name: tastematch-backend
     runtime: docker
-    plan: starter
+    plan: standard
     region: frankfurt
     
     # Configuration Docker
@@ -47,7 +47,7 @@ services:
   - type: web
     name: tastematch-frontend
     runtime: static
-    plan: starter
+    plan: free
 
     # Code source et build
     rootDir: ./frontend
