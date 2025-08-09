@@ -3,6 +3,7 @@
 ## 🚀 Démarrage Rapide
 
 ### Prérequis
+
 - Docker et Docker Compose installés
 - Git configuré
 
@@ -17,10 +18,11 @@ docker-compose -f docker-compose.local.yml up --build
 ```
 
 ### Accès aux services
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **Admin Django**: http://localhost:8000/admin/
-- **PostgreSQL**: localhost:5432 
+
+- **Frontend**: <http://localhost:3000>
+- **Backend API**: <http://localhost:8000>
+- **Admin Django**: <http://localhost:8000/admin/>
+- **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 
 ### Arrêt de l'environnement
@@ -36,6 +38,7 @@ docker-compose -f docker-compose.local.yml down
 ## 🏗️ Architecture Dev vs Prod
 
 ### Développement Local
+
 - **Fichiers**: `docker-compose.local.yml`, `backend/.env.local`, `frontend/.env.local`
 - **Base de données**: PostgreSQL locale (Docker)
 - **Hot reload**: Activé pour backend et frontend
@@ -43,6 +46,7 @@ docker-compose -f docker-compose.local.yml down
 - **Debug**: Activé
 
 ### Production (Render)
+
 - **Fichiers**: `render.yaml`, variables d'environnement Render
 - **Base de données**: PostgreSQL managée (Render)
 - **Déploiement**: Automatique via push sur `main`
@@ -54,6 +58,7 @@ docker-compose -f docker-compose.local.yml down
 ### Variables d'Environnement
 
 **backend/.env.local** (développement):
+
 ```bash
 SECRET_KEY=django-insecure-dev-key-for-local-development-only
 DEBUG=True
@@ -68,6 +73,7 @@ GOOGLE_BOOKS_API_KEY=ta_cle_google_books
 ```
 
 **frontend/.env.local** (développement):
+
 ```bash
 VITE_API_URL=http://localhost:8000
 ```
@@ -75,6 +81,7 @@ VITE_API_URL=http://localhost:8000
 ## 📝 Workflow de Développement
 
 ### 1. Développement Local
+
 ```bash
 # Basculer sur la branche de développement
 git checkout dev
@@ -90,6 +97,7 @@ git checkout dev
 ```
 
 ### 2. Tests et Validation
+
 ```bash
 # Tests backend
 docker-compose -f docker-compose.local.yml exec backend python manage.py test
@@ -99,6 +107,7 @@ cd frontend && npm run lint
 ```
 
 ### 3. Déploiement
+
 ```bash
 # Commit sur dev
 git add .
@@ -114,6 +123,7 @@ git push origin main  # Déclenche le déploiement Render
 ## 🛠️ Commandes Utiles
 
 ### Backend (Django)
+
 ```bash
 # Shell Django
 docker-compose -f docker-compose.local.yml exec backend python manage.py shell
@@ -129,6 +139,7 @@ docker-compose -f docker-compose.local.yml exec backend python manage.py creates
 ```
 
 ### Frontend (React/Vite)
+
 ```bash
 # Installer dépendances
 cd frontend && npm install
@@ -141,6 +152,7 @@ cd frontend && npm run dev
 ```
 
 ### Base de données
+
 ```bash
 # Se connecter à PostgreSQL
 docker-compose -f docker-compose.local.yml exec db psql -U tastematch -d tastematch
@@ -152,24 +164,28 @@ docker-compose -f docker-compose.local.yml exec db pg_dump -U tastematch tastema
 ## 🔍 Troubleshooting
 
 ### Problème: "Container unhealthy"
+
 - **Cause**: Le healthcheck du backend est trop strict
 - **Solution**: Attendre ~1 minute ou redémarrer les services
 
 ### Problème: "Database connection refused"
+
 - **Cause**: Le backend démarre avant PostgreSQL
 - **Solution**: Les healthchecks devraient résoudre automatiquement
 
 ### Problème: Frontend n'accède pas au backend
+
 - **Cause**: Variables d'environnement CORS ou VITE_API_URL incorrectes
 - **Solution**: Vérifier `backend/.env.local` et `frontend/.env.local`
 
 ### Problème: Hot reload ne fonctionne pas
+
 - **Cause**: Volumes Docker mal configurés
 - **Solution**: Redémarrer avec `docker-compose down -v` puis relancer
 
 ## 📁 Structure des Fichiers
 
-```
+```bash
 T4ST3_M4TCH/
 ├── docker-compose.yml          # Production (Render)
 ├── docker-compose.local.yml    # Développement local
