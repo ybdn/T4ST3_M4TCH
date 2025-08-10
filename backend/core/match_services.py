@@ -149,7 +149,7 @@ class RecommendationService:
                     if isinstance(d, str) and len(d) >= 4 and d[:4].isdigit():
                         year = int(d[:4])
                         break
-                    if isinstance(d, int) and MIN_VALID_YEAR < d < MAX_VALID_YEAR:
+                    if isinstance(d, int) and MIN_VALID_YEAR <= d <= MAX_VALID_YEAR:
                         year = d
                         break
                 item['year'] = year
