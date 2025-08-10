@@ -15,8 +15,14 @@ class FeatureFlagsService:
     """Service de gestion des feature flags avec cache local O(1)"""
     
     CACHE_PREFIX = "feature_flag:"
-    CACHE_TIMEOUT = 300  # 5 minutes
     ALL_FLAGS_CACHE_KEY = "feature_flags:all"
+
+    @classmethod
+    def get_cache_timeout(cls):
+        """
+        Returns the cache timeout for feature flags, configurable via Django settings.
+        """
+        return getattr(settings, "FEATURE_FLAGS_CACHE_TIMEOUT", 300)
     
     @classmethod
     def is_enabled(cls, flag_name, user_id=None):
