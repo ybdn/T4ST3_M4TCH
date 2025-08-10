@@ -59,7 +59,7 @@ class FeatureFlagsService:
         
         # Utilise un hash déterministe pour le rollout progressif
         hash_input = f"{user_id}:{flag_name}"
-        hash_value = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
+        hash_value = int(hashlib.sha256(hash_input.encode()).hexdigest()[:8], 16)
         user_percentage = hash_value % 100
         
         return user_percentage < flag_data['rollout_percentage']
@@ -106,11 +106,13 @@ class FeatureFlagsService:
             logger.info(f"Cache invalidated for flag: {flag_name}")
         else:
             # Invalider tout le cache des flags
-            # Note: Django cache n'a pas de pattern delete, donc on invalide manuellement
-            for flag in FeatureFlag.objects.all():
-                cache_key = f"{cls.CACHE_PREFIX}{flag.name}"
+            # Note: Django cache n'a pas de pattern delete, donc on invalide par valeurs connues
+            # Plus efficace que de faire une requête DB pour tous les flags
+            cached_flags = cls.get_all_flags()  # Utilise le cache si disponible
+            for flag_name in cached_flags.keys():
+                cache_key = f"{cls.CACHE_PREFIX}{flag_name}"
                 cache.delete(cache_key)
-                logger.info(f"Cache invalidated for flag: {flag.name}")
+                logger.info(f"Cache invalidated for flag: {flag_name}")
         
         # Invalider le cache des flags globaux dans tous les cas
         cache.delete(cls.ALL_FLAGS_CACHE_KEY)

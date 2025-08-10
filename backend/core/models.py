@@ -812,8 +812,9 @@ class FeatureFlag(models.Model):
         rollout = f" ({self.rollout_percentage}%)" if self.rollout_percentage < 100 and self.enabled else ""
         return f"{status} {self.name}{rollout}"
     
-    # Removed is_enabled classmethod - use FeatureFlagsService.is_enabled() instead
-    # to avoid duplication and ensure cache consistency
+    # The is_enabled classmethod was removed to centralize feature flag checking logic
+    # in the FeatureFlagsService. This avoids duplication, ensures cache consistency,
+    # and makes it easier to manage rollout logic and cross-cutting concerns in one place.
     
     def clean(self):
         """Validation du modèle"""

@@ -1978,6 +1978,7 @@ def get_config(request):
     Expose les feature flags, informations de build et version
     """
     import os
+    import logging
     from datetime import datetime
     from django.conf import settings
     from .services.feature_flags_service import FeatureFlagsService
@@ -2003,7 +2004,6 @@ def get_config(request):
             feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
             
     except Exception as e:
-        import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error loading feature flags: {e}")
         # En cas d'erreur, utiliser les defaults
