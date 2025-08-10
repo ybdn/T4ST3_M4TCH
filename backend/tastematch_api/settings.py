@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 import dj_database_url
 from pathlib import Path
+import socket
+import uuid
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -168,3 +170,108 @@ TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 GOOGLE_BOOKS_API_KEY = os.environ.get('GOOGLE_BOOKS_API_KEY')
+
+# -------------------------------------------------------------
+# Logging structuré
+# -------------------------------------------------------------
+# Variables d'environnement:
+# LOG_LEVEL (default INFO)
+# LOG_FORMAT (json | console)
+# LOG_SAMPLING_RATE (float 0-1 pour limiter DEBUG en prod)
+
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+LOG_FORMAT = os.environ.get('LOG_FORMAT', 'json').lower()
+LOG_SAMPLING_RATE = float(os.environ.get('LOG_SAMPLING_RATE', '1'))
+
+HOSTNAME = socket.gethostname()
+
+class RequestIdFilter:
+    """Ajoute un request_id au record si disponible (stocké en variable thread locale via middleware)."""
+    def filter(self, record):  # noqa: D401
+        from threading import local
+        _local = RequestIdMiddleware.local
+        record.request_id = getattr(_local, 'request_id', '-')
+        record.correlation_id = getattr(_local, 'correlation_id', record.request_id)
+        record.host = HOSTNAME
+        record.environment = 'DEBUG' if DEBUG else 'PROD'
+        return True
+
+class SamplingFilter:
+    """Filtre simple pour échantillonner les logs verbose en production."""
+    def filter(self, record):
+        if LOG_SAMPLING_RATE >= 1:
+            return True
+        import random
+        if record.levelno <= 10:  # DEBUG
+            return random.random() < LOG_SAMPLING_RATE
+        return True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'request_id': {
+            '()': RequestIdFilter,
+        },
+        'sampling': {
+            '()': SamplingFilter,
+        },
+    },
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s %(correlation_id)s %(host)s %(environment)s',
+        },
+        'console': {
+            'format': '[%(asctime)s] %(levelname)s %(name)s %(request_id)s - %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'filters': ['request_id', 'sampling'],
+            'formatter': 'json' if LOG_FORMAT == 'json' else 'console',
+            'level': LOG_LEVEL,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+    },
+}
+
+# -------------------------------------------------------------
+# Middleware pour request id
+# -------------------------------------------------------------
+from django.utils.deprecation import MiddlewareMixin  # noqa: E402
+from threading import local  # noqa: E402
+
+class RequestIdMiddleware(MiddlewareMixin):
+    local = local()
+    header_name = 'HTTP_X_REQUEST_ID'
+
+    def process_request(self, request):
+        rid = request.META.get(self.header_name) or str(uuid.uuid4())
+        self.local.request_id = rid
+        # Support d'un header de corrélation optionnel
+        self.local.correlation_id = request.META.get('HTTP_X_CORRELATION_ID', rid)
+
+    def process_response(self, request, response):
+        rid = getattr(self.local, 'request_id', None)
+        if rid:
+            response['X-Request-ID'] = rid
+        return response
+
+MIDDLEWARE.insert(1, 'tastematch_api.settings.RequestIdMiddleware')  # juste après Security / avant session
