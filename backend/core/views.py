@@ -5,6 +5,8 @@ from rest_framework import status, viewsets, serializers
 from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
+from django.contrib.auth.models import User
+from django.utils import timezone
 from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
 from .models import List, ListItem, ExternalReference
 from .permissions import IsOwnerOrReadOnly
@@ -12,6 +14,7 @@ from .services.external_enrichment_service import ExternalEnrichmentService
 import json
 import hashlib
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -1160,5 +1163,513 @@ def get_external_details(request, source, external_id):
         logger.error(f"External details error: {e}")
         return Response(
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# =====================================
+# MATCH API ENDPOINTS
+# =====================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_matches(request):
+    """
+    Récupère les utilisateurs compatibles basés sur les goûts similaires
+    """
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    category = request.GET.get('category', '')
+    
+    try:
+        current_user = request.user
+        
+        # Récupérer les éléments de l'utilisateur actuel
+        user_items = ListItem.objects.filter(list__owner=current_user)
+        if category and category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+            user_items = user_items.filter(list__category=category)
+        
+        user_titles = set(user_items.values_list('title', flat=True))
+        
+        if not user_titles:
+            return Response({
+                'matches': [],
+                'message': 'Aucun élément dans vos listes pour calculer la compatibilité'
+            })
+        
+        # Trouver des utilisateurs avec des éléments similaires
+        similar_users_data = []
+        other_users = User.objects.exclude(id=current_user.id).prefetch_related('taste_lists__items')
+        
+        for other_user in other_users:
+            other_items = ListItem.objects.filter(list__owner=other_user)
+            if category:
+                other_items = other_items.filter(list__category=category)
+            
+            other_titles = set(other_items.values_list('title', flat=True))
+            
+            if other_titles:
+                # Calculer la similarité
+                common_items = user_titles & other_titles
+                total_unique = len(user_titles | other_titles)
+                similarity_score = len(common_items) / total_unique if total_unique > 0 else 0
+                
+                if similarity_score > 0.1:  # Seuil minimum de similarité
+                    similar_users_data.append({
+                        'user_id': other_user.id,
+                        'username': other_user.username,
+                        'similarity_score': round(similarity_score * 100, 1),
+                        'common_items_count': len(common_items),
+                        'common_items': list(common_items)[:5]  # Limiter à 5 exemples
+                    })
+        
+        # Trier par score de similarité
+        similar_users_data.sort(key=lambda x: x['similarity_score'], reverse=True)
+        
+        return Response({
+            'matches': similar_users_data[:limit],
+            'category': category or 'all',
+            'total': len(similar_users_data)
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors du calcul des matches: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def calculate_match_score(request):
+    """
+    Calcule le score de compatibilité avec un utilisateur spécifique
+    Body: {"user_id": 123, "category": "FILMS"}
+    """
+    target_user_id = request.data.get('user_id')
+    category = request.data.get('category', '')
+    
+    if not target_user_id:
+        return Response(
+            {'error': 'user_id requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        target_user = User.objects.get(id=target_user_id)
+        current_user = request.user
+        
+        if target_user == current_user:
+            return Response(
+                {'error': 'Impossible de calculer la compatibilité avec soi-même'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Récupérer les éléments des deux utilisateurs
+        current_items = ListItem.objects.filter(list__owner=current_user)
+        target_items = ListItem.objects.filter(list__owner=target_user)
+        
+        if category and category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+            current_items = current_items.filter(list__category=category)
+            target_items = target_items.filter(list__category=category)
+        
+        current_titles = set(current_items.values_list('title', flat=True))
+        target_titles = set(target_items.values_list('title', flat=True))
+        
+        common_items = current_titles & target_titles
+        total_unique = len(current_titles | target_titles)
+        
+        similarity_score = len(common_items) / total_unique if total_unique > 0 else 0
+        
+        return Response({
+            'user_id': target_user_id,
+            'username': target_user.username,
+            'similarity_score': round(similarity_score * 100, 1),
+            'common_items_count': len(common_items),
+            'common_items': list(common_items),
+            'your_items_count': len(current_titles),
+            'their_items_count': len(target_titles),
+            'category': category or 'all'
+        })
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors du calcul: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# =====================================
+# SOCIAL API ENDPOINTS
+# =====================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_social_profile(request, user_id=None):
+    """
+    Récupère le profil social d'un utilisateur
+    """
+    try:
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response(
+                    {'error': 'Utilisateur non trouvé'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            user = request.user
+        
+        # Récupérer les statistiques
+        total_lists = List.objects.filter(owner=user).count()
+        total_items = ListItem.objects.filter(list__owner=user).count()
+        
+        # Statistiques par catégorie
+        category_stats = {}
+        for category_value, category_label in List.Category.choices:
+            items_count = ListItem.objects.filter(
+                list__owner=user,
+                list__category=category_value
+            ).count()
+            category_stats[category_value] = {
+                'label': category_label,
+                'count': items_count
+            }
+        
+        # Éléments récemment ajoutés
+        recent_items = ListItem.objects.filter(list__owner=user).order_by('-created_at')[:5]
+        recent_items_data = [
+            {
+                'id': item.id,
+                'title': item.title,
+                'category': item.list.category,
+                'category_display': item.list.get_category_display(),
+                'added_date': item.created_at.isoformat()
+            }
+            for item in recent_items
+        ]
+        
+        is_own_profile = user == request.user
+        
+        return Response({
+            'user_id': user.id,
+            'username': user.username,
+            'is_own_profile': is_own_profile,
+            'stats': {
+                'total_lists': total_lists,
+                'total_items': total_items,
+                'categories': category_stats
+            },
+            'recent_items': recent_items_data,
+            'member_since': user.date_joined.isoformat()
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la récupération du profil: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_public_lists(request, user_id):
+    """
+    Récupère les listes publiques d'un utilisateur (version simplifiée)
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        category = request.GET.get('category', '')
+        
+        # Pour le moment, toutes les listes sont considérées comme visibles
+        # Dans une vraie app, on aurait un champ de visibilité
+        user_lists = List.objects.filter(owner=user)
+        
+        if category and category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+            user_lists = user_lists.filter(category=category)
+        
+        lists_data = []
+        for user_list in user_lists:
+            items_count = user_list.items.count()
+            sample_items = user_list.items.all()[:3]  # 3 exemples d'éléments
+            
+            lists_data.append({
+                'id': user_list.id,
+                'name': user_list.name,
+                'category': user_list.category,
+                'category_display': user_list.get_category_display(),
+                'items_count': items_count,
+                'sample_items': [
+                    {'title': item.title, 'description': item.description}
+                    for item in sample_items
+                ]
+            })
+        
+        return Response({
+            'user_id': user_id,
+            'username': user.username,
+            'lists': lists_data,
+            'category': category or 'all'
+        })
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la récupération des listes: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# =====================================
+# VERSUS API ENDPOINTS  
+# =====================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_versus(request):
+    """
+    Crée une comparaison versus entre deux éléments
+    Body: {
+        "item1_id": 123,
+        "item2_id": 456,
+        "category": "FILMS"
+    }
+    """
+    item1_id = request.data.get('item1_id')
+    item2_id = request.data.get('item2_id')
+    category = request.data.get('category', '')
+    
+    if not item1_id or not item2_id:
+        return Response(
+            {'error': 'item1_id et item2_id sont requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if item1_id == item2_id:
+        return Response(
+            {'error': 'Les deux éléments doivent être différents'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Récupérer les éléments (de n'importe quel utilisateur pour les comparaisons publiques)
+        item1 = ListItem.objects.get(id=item1_id)
+        item2 = ListItem.objects.get(id=item2_id)
+        
+        # Vérifier que les éléments sont de la même catégorie si spécifiée
+        if category:
+            if item1.list.category != category or item2.list.category != category:
+                return Response(
+                    {'error': 'Les éléments doivent être de la catégorie spécifiée'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        elif item1.list.category != item2.list.category:
+            return Response(
+                {'error': 'Les éléments doivent être de la même catégorie'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Créer un ID unique pour cette comparaison
+        versus_id = f"vs_{min(item1_id, item2_id)}_{max(item1_id, item2_id)}"
+        
+        # Récupérer les métadonnées des éléments s'ils existent
+        item1_data = {
+            'id': item1.id,
+            'title': item1.title,
+            'description': item1.description,
+            'category': item1.list.category,
+            'poster_url': getattr(item1.external_ref, 'poster_url', None) if hasattr(item1, 'external_ref') else None,
+            'rating': getattr(item1.external_ref, 'rating', None) if hasattr(item1, 'external_ref') else None
+        }
+        
+        item2_data = {
+            'id': item2.id,
+            'title': item2.title,
+            'description': item2.description,
+            'category': item2.list.category,
+            'poster_url': getattr(item2.external_ref, 'poster_url', None) if hasattr(item2, 'external_ref') else None,
+            'rating': getattr(item2.external_ref, 'rating', None) if hasattr(item2, 'external_ref') else None
+        }
+        
+        return Response({
+            'versus_id': versus_id,
+            'item1': item1_data,
+            'item2': item2_data,
+            'category': item1.list.category,
+            'created_by': request.user.username,
+            'created_at': timezone.now().isoformat()
+        }, status=status.HTTP_201_CREATED)
+        
+    except ListItem.DoesNotExist:
+        return Response(
+            {'error': 'Un ou plusieurs éléments non trouvés'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la création du versus: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def vote_versus(request):
+    """
+    Vote pour un élément dans une comparaison versus
+    Body: {
+        "versus_id": "vs_123_456",
+        "chosen_item_id": 123
+    }
+    """
+    versus_id = request.data.get('versus_id')
+    chosen_item_id = request.data.get('chosen_item_id')
+    
+    if not versus_id or not chosen_item_id:
+        return Response(
+            {'error': 'versus_id et chosen_item_id sont requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Valider le format du versus_id
+        if not versus_id.startswith('vs_'):
+            return Response(
+                {'error': 'Format versus_id invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Extraire les IDs des éléments du versus_id
+        parts = versus_id.replace('vs_', '').split('_')
+        if len(parts) != 2:
+            return Response(
+                {'error': 'Format versus_id invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        item1_id, item2_id = map(int, parts)
+        
+        # Vérifier que l'élément choisi fait partie de la comparaison
+        if chosen_item_id not in [item1_id, item2_id]:
+            return Response(
+                {'error': 'L\'élément choisi ne fait pas partie de cette comparaison'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier que les éléments existent
+        chosen_item = ListItem.objects.get(id=chosen_item_id)
+        other_item_id = item2_id if chosen_item_id == item1_id else item1_id
+        other_item = ListItem.objects.get(id=other_item_id)
+        
+        # Dans une vraie application, on sauvegarderait le vote en base
+        # Ici on simule juste la réponse
+        
+        return Response({
+            'versus_id': versus_id,
+            'chosen_item': {
+                'id': chosen_item.id,
+                'title': chosen_item.title
+            },
+            'rejected_item': {
+                'id': other_item.id,
+                'title': other_item.title
+            },
+            'voter': request.user.username,
+            'voted_at': timezone.now().isoformat(),
+            'message': f'Vote enregistré pour "{chosen_item.title}"'
+        })
+        
+    except (ValueError, ListItem.DoesNotExist):
+        return Response(
+            {'error': 'Versus ou éléments non trouvés'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors du vote: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_random_versus(request):
+    """
+    Génère une comparaison versus aléatoire
+    """
+    category = request.GET.get('category', '')
+    
+    try:
+        # Récupérer les éléments pour la comparaison
+        items_query = ListItem.objects.all()
+        
+        if category and category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+            items_query = items_query.filter(list__category=category)
+        
+        # Prendre des éléments populaires (qui apparaissent dans plusieurs listes)
+        popular_items = items_query.values('title').annotate(
+            count=Count('title')
+        ).filter(count__gte=2).order_by('-count')[:20]
+        
+        if len(popular_items) < 2:
+            # Fallback: prendre des éléments aléatoires
+            all_items = list(items_query.all()[:50])
+            if len(all_items) < 2:
+                return Response(
+                    {'error': 'Pas assez d\'éléments pour créer une comparaison'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            random_items = random.sample(all_items, 2)
+            item1, item2 = random_items
+        else:
+            # Choisir 2 titres populaires aléatoires
+            selected_titles = random.sample(list(popular_items), 2)
+            
+            # Récupérer un exemple de chaque titre
+            item1 = ListItem.objects.filter(title=selected_titles[0]['title']).first()
+            item2 = ListItem.objects.filter(title=selected_titles[1]['title']).first()
+        
+        # Créer le versus
+        versus_id = f"vs_{min(item1.id, item2.id)}_{max(item1.id, item2.id)}"
+        
+        item1_data = {
+            'id': item1.id,
+            'title': item1.title,
+            'description': item1.description,
+            'category': item1.list.category,
+            'poster_url': getattr(item1.external_ref, 'poster_url', None) if hasattr(item1, 'external_ref') else None,
+            'rating': getattr(item1.external_ref, 'rating', None) if hasattr(item1, 'external_ref') else None
+        }
+        
+        item2_data = {
+            'id': item2.id,
+            'title': item2.title,
+            'description': item2.description,
+            'category': item2.list.category,
+            'poster_url': getattr(item2.external_ref, 'poster_url', None) if hasattr(item2, 'external_ref') else None,
+            'rating': getattr(item2.external_ref, 'rating', None) if hasattr(item2, 'external_ref') else None
+        }
+        
+        return Response({
+            'versus_id': versus_id,
+            'item1': item1_data,
+            'item2': item2_data,
+            'category': category or 'mixed',
+            'type': 'random'
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la génération du versus: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
