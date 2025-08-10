@@ -1980,8 +1980,9 @@ def get_config(request):
     import os
     from datetime import datetime
     from django.conf import settings
+    from .services.feature_flags_service import FeatureFlagsService
     
-    # Feature flags par défaut (pour l'instant depuis settings, plus tard depuis modèle)
+    # Feature flags depuis la base de données avec fallback
     default_feature_flags = {
         'social_profile': True,
         'friend_system': True,
@@ -1990,8 +1991,21 @@ def get_config(request):
         'recommendations': True
     }
     
-    # Récupérer les feature flags depuis les settings ou utiliser les defaults
-    feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
+    try:
+        # Récupérer les feature flags depuis le service (cache + DB)
+        db_feature_flags = FeatureFlagsService.get_all_flags()
+        
+        # Fusionner avec les defaults (les flags de la DB priment)
+        feature_flags = {**default_feature_flags, **db_feature_flags}
+        
+        # Fallback vers settings si la DB est vide
+        if not db_feature_flags:
+            feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
+            
+    except Exception as e:
+        logger.error(f"Error loading feature flags: {e}")
+        # En cas d'erreur, utiliser les defaults
+        feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
     
     # Information de build
     build_info = {

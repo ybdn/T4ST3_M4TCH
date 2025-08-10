@@ -762,3 +762,90 @@ class MatchSession(models.Model):
         """Vérifie si on attend le choix d'un utilisateur"""
         user_choice = self.get_user_choice(user)
         return user_choice is None and not self.is_completed
+
+
+# ========================================
+# MODÈLES SYSTÈME FEATURE FLAGS
+# ========================================
+
+class FeatureFlag(models.Model):
+    """Système de feature flags pour activer/désactiver des fonctionnalités progressivement"""
+    
+    name = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="Nom du feature flag"
+    )
+    enabled = models.BooleanField(
+        default=False,
+        verbose_name="Activé"
+    )
+    rollout_percentage = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Pourcentage de déploiement (0-100)"
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description du flag"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Date de modification"
+    )
+    
+    class Meta:
+        verbose_name = "Feature Flag"
+        verbose_name_plural = "Feature Flags"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['enabled']),
+        ]
+    
+    def __str__(self):
+        status = "✅" if self.enabled else "❌"
+        rollout = f" ({self.rollout_percentage}%)" if self.rollout_percentage < 100 and self.enabled else ""
+        return f"{status} {self.name}{rollout}"
+    
+    @classmethod
+    def is_enabled(cls, flag_name, user_id=None):
+        """
+        Vérifie si un feature flag est activé pour un utilisateur donné
+        Prend en compte le rollout percentage si fourni
+        """
+        try:
+            flag = cls.objects.get(name=flag_name)
+            
+            if not flag.enabled:
+                return False
+            
+            # Si rollout à 100% ou pas d'utilisateur spécifique, retourne enabled
+            if flag.rollout_percentage >= 100 or user_id is None:
+                return flag.enabled
+            
+            # Utilise un hash deterministe basé sur user_id + flag_name 
+            # pour que le même utilisateur ait toujours le même résultat
+            import hashlib
+            hash_input = f"{user_id}:{flag_name}"
+            hash_value = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
+            user_percentage = hash_value % 100
+            
+            return user_percentage < flag.rollout_percentage
+            
+        except cls.DoesNotExist:
+            return False
+    
+    def clean(self):
+        """Validation du modèle"""
+        from django.core.exceptions import ValidationError
+        
+        if not (0 <= self.rollout_percentage <= 100):
+            raise ValidationError("Le pourcentage de déploiement doit être entre 0 et 100")
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
