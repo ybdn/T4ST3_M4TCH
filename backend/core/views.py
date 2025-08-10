@@ -1352,7 +1352,15 @@ def get_user_social_profile(request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([ScopedRateThrottle])
 def get_user_social_profile_me(request):
-    """Endpoint spécifique C1: GET /social/profile/me – même payload que /social/profile/."""
+    """
+    Endpoint spécifique C1: GET /social/profile/me – même payload que /social/profile/.
+
+    Ce endpoint existe en complément de GET /social/profile/ pour des raisons de clarté et de convention RESTful :
+    - /social/profile/ : Utilisé pour récupérer le profil social de l'utilisateur actuellement authentifié. Peut être utilisé dans des contextes où l'identité de l'utilisateur est implicite.
+    - /social/profile/me : Fournit explicitement le profil de l'utilisateur connecté, suivant la convention courante d'API REST où /me désigne toujours l'utilisateur courant. Cela peut faciliter l'intégration côté client, notamment pour des frameworks ou outils qui s'attendent à un endpoint /me.
+
+    Les deux endpoints retournent exactement le même payload (profil social de l'utilisateur authentifié), mais sont exposés pour répondre à différents besoins d'intégration ou de lisibilité côté client.
+    """
     try:
         from .models import UserProfile
         from .serializers import SocialProfileSerializer
