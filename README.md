@@ -260,3 +260,43 @@ python manage.py test
 # Logs en temps réel
 docker-compose logs -f
 ```
+
+## 🤝 Contribution
+
+Nous accueillons avec plaisir les contributions à T4ST3_M4TCH ! Que vous souhaitiez corriger un bug, ajouter une nouvelle fonctionnalité, ou améliorer la documentation, votre aide est précieuse.
+
+### Comment contribuer
+
+1. **Lisez le guide de contribution** : [CONTRIBUTING.md](./CONTRIBUTING.md)
+2. **Parcourez les issues** : Regardez les [issues ouvertes](https://github.com/ybdn/T4ST3_M4TCH/issues) pour trouver des tâches à réaliser
+3. **Proposez de nouvelles idées** : Créez une issue pour discuter de nouvelles fonctionnalités
+4. **Soumettez une Pull Request** : Suivez les conventions décrites dans le guide de contribution
+
+### Types de contributions recherchées
+
+- 🐛 **Corrections de bugs** : Aidez-nous à identifier et corriger les problèmes
+- ✨ **Nouvelles fonctionnalités** : Implémentez des features du backlog ou proposez-en de nouvelles
+- 📚 **Documentation** : Améliorez la documentation technique ou utilisateur
+- 🧪 **Tests** : Ajoutez des tests pour améliorer la couverture
+- 🎨 **Design & UX** : Proposez des améliorations d'interface utilisateur
+- 🔧 **DevOps** : Optimisez les workflows de développement et de déploiement
+
+### Environnement de développement
+
+Consultez notre [guide de configuration de développement](./DEV_SETUP.md) pour mettre en place votre environnement local rapidement.
+
+### Code de conduite
+
+En participant à ce projet, vous acceptez de respecter notre code de conduite qui favorise un environnement ouvert et accueillant pour tous les contributeurs.
+
+## 📄 Licence
+
+Ce projet est sous licence [MIT](./LICENSE). Voir le fichier LICENSE pour plus de détails.
+
+## 🙏 Remerciements
+
+Merci à tous les contributeurs qui aident à faire de T4ST3_M4TCH une meilleure plateforme pour découvrir et partager les goûts culturels !
+
+- L'équipe de développement initiale
+- La communauté open source pour les outils et bibliothèques utilisés
+- Les APIs externes : TMDB, Spotify, et Google Books pour leurs données riches
