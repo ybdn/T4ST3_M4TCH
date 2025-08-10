@@ -4,6 +4,9 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
+
+// Limite pour éviter un prefetch en boucle si l'API renvoie des listes très courtes
+const MAX_RECOMMENDATIONS_LIMIT = 200;
 import { matchApi } from "../services/matchApi";
 import { useErrorHandler } from "./useErrorHandler";
 
@@ -66,7 +69,9 @@ export const useMatchRecommendations = (initialParams?: {
       ).toUpperCase();
       const extId = (r.external_id as string) || (r.id as string);
       if (!extId) {
-        throw new Error("Recommandation sans identifiant valide (external_id / id manquant)");
+        throw new Error(
+          "Recommandation sans identifiant valide (external_id / id manquant)"
+        );
       }
       return {
         external_id: extId,
@@ -124,15 +129,13 @@ export const useMatchRecommendations = (initialParams?: {
           description: current.description,
           poster_url: current.poster_url,
         });
-        // Retirer l'élément courant et ajuster l'index si nécessaire
-        setState((prev) => {
-          const newData = prev.data.filter((_, i) => i !== currentIndex);
-          // Ajuster currentIndex pour ne pas sortir des bornes
-          setCurrentIndex((prevIdx) => {
-            if (newData.length === 0) return 0;
-            return Math.min(prevIdx, newData.length - 1);
-          });
-          return { ...prev, data: newData };
+        // Retirer l'élément courant (version refactor post-review)
+        const newData = state.data.filter((_, i) => i !== currentIndex);
+        setState((prev) => ({ ...prev, data: newData }));
+        // Ajuster currentIndex pour rester dans les bornes après suppression
+        setCurrentIndex((prevIdx) => {
+          if (newData.length === 0) return 0;
+          return Math.min(prevIdx, newData.length - 1);
         });
         return true;
       } catch (e) {
@@ -152,7 +155,7 @@ export const useMatchRecommendations = (initialParams?: {
     if (
       state.data.length > 0 &&
       currentIndex >= state.data.length - 2 &&
-      state.data.length < 200 // garde-fou pour éviter boucle si backend renvoie peu d'items
+      state.data.length < MAX_RECOMMENDATIONS_LIMIT // garde-fou pour éviter boucle si backend renvoie peu d'items
     ) {
       fetchRecommendations(lastParams);
     }
