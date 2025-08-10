@@ -46,6 +46,6 @@ class SamplingFilter:
         rate = getattr(settings, 'LOG_SAMPLING_RATE', 1)
         if rate >= 1:
             return True
-        if record.levelno <= 10:  # DEBUG
+        if record.levelno <= logging.DEBUG:  # DEBUG
             return random.random() < rate
         return True
