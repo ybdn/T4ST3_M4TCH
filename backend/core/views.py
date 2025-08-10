@@ -2056,24 +2056,20 @@ def get_config(request):
 # -----------------------------------------------------------
 # Association explicite des scopes de throttling (issue #27)
 # -----------------------------------------------------------
-# Attribution explicite des scopes de throttling (issue #27)
-_throttle_scopes = {
-    'register_user': 'register',
-    'search_items': 'search',
-    'get_suggestions': 'search',
-    'quick_add_item': 'match_action',
-    'get_match_recommendations': 'match_action',
-    'submit_match_action': 'match_action',
+try:  # Attribution après définition des vues
+    register_user.throttle_scope = 'register'
+    search_items.throttle_scope = 'search'
+    get_suggestions.throttle_scope = 'search'
+    quick_add_item.throttle_scope = 'match_action'
+    get_match_recommendations.throttle_scope = 'match_action'
+    submit_match_action.throttle_scope = 'match_action'
     # External / enrichment
-    'search_external': 'external',
-    'get_trending_external': 'external',
-    'import_from_external': 'external',
-    'get_external_details': 'external',
-    'enrich_list_item': 'external',
-    'get_trending_suggestions': 'external',
-    'get_similar_suggestions': 'external',
-}
-for func_name, scope in _throttle_scopes.items():
-    func = globals().get(func_name)
-    if func is not None:
-        setattr(func, 'throttle_scope', scope)
+    search_external.throttle_scope = 'external'
+    get_trending_external.throttle_scope = 'external'
+    import_from_external.throttle_scope = 'external'
+    get_external_details.throttle_scope = 'external'
+    enrich_list_item.throttle_scope = 'external'
+    get_trending_suggestions.throttle_scope = 'external'
+    get_similar_suggestions.throttle_scope = 'external'
+except NameError:  # pragma: no cover
+    pass
