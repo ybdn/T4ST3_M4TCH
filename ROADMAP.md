@@ -407,49 +407,49 @@ Le script:
 
 ### Mapping issues (code -> #GitHub)
 
-| Code | # | Milestone |
-| ---- | -- | --------- |
-| A1 | #20 | M1 - Core Match Alpha |
-| A3 | #21 | M1 - Core Match Alpha |
-| B1 | #22 | M1 - Core Match Alpha |
-| B2 | #23 | M1 - Core Match Alpha |
-| B4 | #24 | M1 - Core Match Alpha |
-| B5 | #25 | M1 - Core Match Alpha |
-| F1 | #26 | M1 - Core Match Alpha |
-| G1 | #27 | M1 - Core Match Alpha |
-| C1 | #28 | M2 - Social v1 |
-| C3 | #29 | M2 - Social v1 |
-| D1 | #30 | M2 - Social v1 |
-| D2 | #31 | M2 - Social v1 |
-| D4 | #32 | M2 - Social v1 |
-| D3 | #33 | M2 - Social v1 |
-| B3 | #34 | M2 - Social v1 |
-| E2 | #35 | M3 - Versus v1 |
-| E4 | #36 | M3 - Versus v1 |
-| E5 | #37 | M3 - Versus v1 |
-| E6 | #38 | M3 - Versus v1 |
-| E7 | #39 | M3 - Versus v1 |
-| H1 | #40 | M3 - Versus v1 |
-| H2 | #41 | M3 - Versus v1 |
-| F2 | #42 | M4 - Qualité/Obs |
-| F3 | #43 | M4 - Qualité/Obs |
-| F4 | #44 | M4 - Qualité/Obs |
-| F5 | #45 | M4 - Qualité/Obs |
-| F6 | #46 | M4 - Qualité/Obs |
-| G2 | #47 | M4 - Qualité/Obs |
-| G3 | #48 | M4 - Qualité/Obs |
-| I1 | #49 | M4 - Qualité/Obs |
-| I3 | #50 | M4 - Qualité/Obs |
-| J2 | #51 | M4 - Qualité/Obs |
-| J4 | #52 | M4 - Qualité/Obs |
-| K2 | #53 | M5 - Bêta Fermée |
-| K1 | #54 | M5 - Bêta Fermée |
-| K3 | #55 | M5 - Bêta Fermée |
-| H3 | #56 | M5 - Bêta Fermée |
-| I2 | #57 | M5 - Bêta Fermée |
-| G4 | #58 | M5 - Bêta Fermée |
-| K4 | #59 | M5 - Bêta Fermée |
-| M6/PostBeta | #60 | M6 - Bêta Elargie |
+| Code        | #   | Milestone             |
+| ----------- | --- | --------------------- |
+| A1          | #20 | M1 - Core Match Alpha |
+| A3          | #21 | M1 - Core Match Alpha |
+| B1          | #22 | M1 - Core Match Alpha |
+| B2          | #23 | M1 - Core Match Alpha |
+| B4          | #24 | M1 - Core Match Alpha |
+| B5          | #25 | M1 - Core Match Alpha |
+| F1          | #26 | M1 - Core Match Alpha |
+| G1          | #27 | M1 - Core Match Alpha |
+| C1          | #28 | M2 - Social v1        |
+| C3          | #29 | M2 - Social v1        |
+| D1          | #30 | M2 - Social v1        |
+| D2          | #31 | M2 - Social v1        |
+| D4          | #32 | M2 - Social v1        |
+| D3          | #33 | M2 - Social v1        |
+| B3          | #34 | M2 - Social v1        |
+| E2          | #35 | M3 - Versus v1        |
+| E4          | #36 | M3 - Versus v1        |
+| E5          | #37 | M3 - Versus v1        |
+| E6          | #38 | M3 - Versus v1        |
+| E7          | #39 | M3 - Versus v1        |
+| H1          | #40 | M3 - Versus v1        |
+| H2          | #41 | M3 - Versus v1        |
+| F2          | #42 | M4 - Qualité/Obs      |
+| F3          | #43 | M4 - Qualité/Obs      |
+| F4          | #44 | M4 - Qualité/Obs      |
+| F5          | #45 | M4 - Qualité/Obs      |
+| F6          | #46 | M4 - Qualité/Obs      |
+| G2          | #47 | M4 - Qualité/Obs      |
+| G3          | #48 | M4 - Qualité/Obs      |
+| I1          | #49 | M4 - Qualité/Obs      |
+| I3          | #50 | M4 - Qualité/Obs      |
+| J2          | #51 | M4 - Qualité/Obs      |
+| J4          | #52 | M4 - Qualité/Obs      |
+| K2          | #53 | M5 - Bêta Fermée      |
+| K1          | #54 | M5 - Bêta Fermée      |
+| K3          | #55 | M5 - Bêta Fermée      |
+| H3          | #56 | M5 - Bêta Fermée      |
+| I2          | #57 | M5 - Bêta Fermée      |
+| G4          | #58 | M5 - Bêta Fermée      |
+| K4          | #59 | M5 - Bêta Fermée      |
+| M6/PostBeta | #60 | M6 - Bêta Elargie     |
 
 ---
 
