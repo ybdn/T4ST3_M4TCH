@@ -12,8 +12,24 @@ from .services.external_enrichment_service import ExternalEnrichmentService
 import json
 import hashlib
 import logging
+import time
+from prometheus_client import Counter, Histogram
 
 logger = logging.getLogger(__name__)
+
+# Prometheus metrics for recommendations
+recommendation_requests_total = Counter(
+    'recommendation_requests_total', 
+    'Total number of recommendation requests',
+    ['recommendation_type', 'category']
+)
+
+recommendation_latency_seconds = Histogram(
+    'recommendation_latency_seconds',
+    'Latency of recommendation requests in seconds',
+    ['recommendation_type', 'category'],
+    buckets=[0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, float('inf')]
+)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -264,7 +280,16 @@ def get_suggestions(request):
     - category: catégorie ciblée (optionnel)
     - limit: nombre de suggestions (défaut: 6)
     """
+    start_time = time.time()
     category = request.GET.get('category', '').strip()
+    category_label = category if category else 'all'
+    
+    # Increment request counter
+    recommendation_requests_total.labels(
+        recommendation_type='suggestions',
+        category=category_label
+    ).inc()
+    
     limit = min(int(request.GET.get('limit', 6)), 20)  # Max 20 suggestions
     
     # Clé de cache
@@ -272,6 +297,11 @@ def get_suggestions(request):
     cached_suggestions = cache.get(cache_key)
     
     if cached_suggestions:
+        # Record latency even for cached responses
+        recommendation_latency_seconds.labels(
+            recommendation_type='suggestions',
+            category=category_label
+        ).observe(time.time() - start_time)
         return Response(cached_suggestions)
     
     suggestions = []
@@ -295,6 +325,12 @@ def get_suggestions(request):
     
     # Cache pendant 30 minutes
     cache.set(cache_key, response_data, 1800)
+    
+    # Record latency
+    recommendation_latency_seconds.labels(
+        recommendation_type='suggestions',
+        category=category_label
+    ).observe(time.time() - start_time)
     
     return Response(response_data)
 
@@ -717,12 +753,26 @@ def get_trending_suggestions(request, category):
     """
     Suggestions basées sur le contenu tendance des APIs externes
     """
+    start_time = time.time()
+    
+    # Increment request counter
+    recommendation_requests_total.labels(
+        recommendation_type='trending',
+        category=category
+    ).inc()
+    
     limit = min(int(request.GET.get('limit', 10)), 50)
     time_window = request.GET.get('time_window', 'week')
     
     try:
         enrichment_service = ExternalEnrichmentService()
         results = enrichment_service.get_trending_content(category, limit)
+        
+        # Record latency
+        recommendation_latency_seconds.labels(
+            recommendation_type='trending',
+            category=category
+        ).observe(time.time() - start_time)
         
         return Response({
             'suggestions': results,
@@ -732,6 +782,12 @@ def get_trending_suggestions(request, category):
         })
         
     except Exception as e:
+        # Record latency even for errors
+        recommendation_latency_seconds.labels(
+            recommendation_type='trending',
+            category=category
+        ).observe(time.time() - start_time)
+        
         return Response(
             {'error': f'Erreur lors de la récupération des tendances: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -744,6 +800,8 @@ def get_similar_suggestions(request, item_id):
     """
     Suggestions similaires basées sur un élément existant
     """
+    start_time = time.time()
+    
     limit = min(int(request.GET.get('limit', 10)), 50)
     
     try:
@@ -753,9 +811,21 @@ def get_similar_suggestions(request, item_id):
             list__owner=request.user
         )
         
+        # Increment request counter with the item's category
+        recommendation_requests_total.labels(
+            recommendation_type='similar',
+            category=list_item.list.category
+        ).inc()
+        
         # Utiliser la nouvelle méthode pour obtenir du contenu similaire
         enrichment_service = ExternalEnrichmentService()
         results = enrichment_service.get_similar_content(list_item, limit)
+        
+        # Record latency
+        recommendation_latency_seconds.labels(
+            recommendation_type='similar',
+            category=list_item.list.category
+        ).observe(time.time() - start_time)
         
         return Response({
             'suggestions': results,
@@ -768,11 +838,23 @@ def get_similar_suggestions(request, item_id):
         })
         
     except ListItem.DoesNotExist:
+        # Record latency even for errors (use 'unknown' category)
+        recommendation_latency_seconds.labels(
+            recommendation_type='similar',
+            category='unknown'
+        ).observe(time.time() - start_time)
+        
         return Response(
             {'error': 'Élément de référence non trouvé'}, 
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
+        # Record latency even for errors (use 'unknown' category)
+        recommendation_latency_seconds.labels(
+            recommendation_type='similar',
+            category='unknown'
+        ).observe(time.time() - start_time)
+        
         return Response(
             {'error': f'Erreur lors de la récupération des suggestions: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

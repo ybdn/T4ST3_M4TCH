@@ -41,5 +41,4 @@ urlpatterns = [
         'patch': 'partial_update',
         'delete': 'destroy'
     }), name='list-items-detail'),
-    path('', include(router.urls)),
-]
+] + router.urls
