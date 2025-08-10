@@ -6,6 +6,7 @@ import hashlib
 from django.core.cache import cache
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.conf import settings
 from ..models import FeatureFlag
 
 logger = logging.getLogger(__name__)
@@ -49,11 +50,11 @@ class FeatureFlagsService:
                     'rollout_percentage': flag.rollout_percentage
                 }
                 # Mettre en cache
-                cache.set(cache_key, flag_data, cls.CACHE_TIMEOUT)
+                cache.set(cache_key, flag_data, cls.get_cache_timeout())
             except FeatureFlag.DoesNotExist:
                 # Flag inexistant - cacher le résultat négatif
                 flag_data = {'enabled': False, 'rollout_percentage': 0}
-                cache.set(cache_key, flag_data, cls.CACHE_TIMEOUT)
+                cache.set(cache_key, flag_data, cls.get_cache_timeout())
         
         # Évaluer le flag
         if not flag_data['enabled']:
@@ -90,7 +91,7 @@ class FeatureFlagsService:
                 cached_flags[flag.name] = flag.enabled
             
             # Cacher le résultat
-            cache.set(cls.ALL_FLAGS_CACHE_KEY, cached_flags, cls.CACHE_TIMEOUT)
+            cache.set(cls.ALL_FLAGS_CACHE_KEY, cached_flags, cls.get_cache_timeout())
             
             logger.info(f"Feature flags loaded from DB: {len(cached_flags)} flags")
         

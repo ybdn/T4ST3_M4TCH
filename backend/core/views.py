@@ -1983,6 +1983,9 @@ def get_config(request):
     from django.conf import settings
     from .services.feature_flags_service import FeatureFlagsService
     
+    # Initialiser le logger au niveau module pour fiabilité
+    logger = logging.getLogger(__name__)
+    
     # Feature flags depuis la base de données avec fallback
     default_feature_flags = {
         'social_profile': True,
@@ -2004,7 +2007,6 @@ def get_config(request):
             feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
             
     except Exception as e:
-        logger = logging.getLogger(__name__)
         logger.error(f"Error loading feature flags: {e}")
         # En cas d'erreur, utiliser les defaults
         feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
