@@ -7,6 +7,7 @@ import requests
 import random
 import time
 import logging
+import hashlib
 from typing import List as TypingList, Dict, Optional
 from django.contrib.auth.models import User
 from django.db.models import Q, Count, Avg
@@ -68,9 +69,17 @@ class RecommendationService:
                 
                 cat_time = time.time() - cat_start_time
                 logger.info(f"Category {cat}: {len(per_category[cat])} items in {cat_time:.3f}s")
-            except Exception as e:
+            except requests.RequestException as e:
                 cat_time = time.time() - cat_start_time
-                logger.error(f"Error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
+                logger.error(f"Network error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
+                per_category[cat] = []
+            except KeyError as e:
+                cat_time = time.time() - cat_start_time
+                logger.error(f"Key error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
+                per_category[cat] = []
+            except (ValueError, TypeError) as e:
+                cat_time = time.time() - cat_start_time
+                logger.error(f"Data error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
                 per_category[cat] = []
 
         # Interleave: alterner les catégories pour éviter la monotonie
@@ -345,7 +354,8 @@ class RecommendationService:
         # Retourner uniquement les items non vus
         filtered_items = [item for item in items if item['external_id'] not in all_seen]
         
-        logger.debug(f"Filtered {len(items) - len(filtered_items)} seen items out of {len(items)} for user {user.id}")
+        user_hash = hashlib.sha256(str(user.id).encode()).hexdigest()[:8]
+        logger.debug(f"Filtered {len(items) - len(filtered_items)} seen items out of {len(items)} for user {user_hash}")
         return filtered_items
     
     def _calculate_compatibility_score(self, user: User, content: Dict) -> float:

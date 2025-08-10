@@ -3,6 +3,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from django.conf import settings
+from unittest.mock import patch
 import os
 
 
@@ -490,22 +491,23 @@ class RecommendationServiceTestCase(TestCase):
         """Test que les données de fallback sont utilisées quand les clés API ne sont pas disponibles"""
         from .match_services import RecommendationService
         
-        # Créer un service sans clés API
         service = RecommendationService()
-        service.tmdb_api_key = ''
-        service.google_books_api_key = ''
         
-        # Tester les films (devrait utiliser fallback)
-        movies = service._get_movie_recommendations(self.user, 3)
-        self.assertGreater(len(movies), 0)
-        for movie in movies:
-            self.assertEqual(movie['content_type'], 'FILMS')
-        
-        # Tester les livres (devrait utiliser fallback) 
-        books = service._get_book_recommendations(self.user, 3)
-        self.assertGreater(len(books), 0)
-        for book in books:
-            self.assertEqual(book['content_type'], 'LIVRES')
+        # Utiliser mocking pour simuler l'absence de clés API
+        with patch.object(service, 'tmdb_api_key', ''), \
+             patch.object(service, 'google_books_api_key', ''):
+            
+            # Tester les films (devrait utiliser fallback)
+            movies = service._get_movie_recommendations(self.user, 3)
+            self.assertGreater(len(movies), 0)
+            for movie in movies:
+                self.assertEqual(movie['content_type'], 'FILMS')
+            
+            # Tester les livres (devrait utiliser fallback) 
+            books = service._get_book_recommendations(self.user, 3)
+            self.assertGreater(len(books), 0)
+            for book in books:
+                self.assertEqual(book['content_type'], 'LIVRES')
     
     def test_heterogeneous_recommendations(self):
         """Test que les recommandations mélangent différentes catégories"""
