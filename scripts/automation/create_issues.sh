@@ -28,6 +28,21 @@ if ! gh auth status >/dev/null 2>&1; then
 total=$(jq 'length' scripts/automation/issues.json)
 echo "Lecture issues.json ($total items)"
 
+# Préparer labels requis
+required_labels=$(jq -r '.[].labels[]' scripts/automation/issues.json | sort -u)
+existing_labels=$(gh label list --limit 200 | cut -f1)
+for l in $required_labels; do
+  if ! echo "$existing_labels" | grep -qx "$l"; then
+    if $dry_run; then
+      echo "[DRY-RUN] create label $l"
+    else
+      color="BFDADC" # default soft color
+      gh label create "$l" --color "$color" --description "auto-created" 2>/dev/null || echo "Label déjà existant (race): $l"
+      echo "Label créé: $l"
+    fi
+  fi
+done
+
 count=0
 processed=0
 skipped=0
