@@ -15,6 +15,7 @@ import dj_database_url
 from pathlib import Path
 import socket
 import uuid
+from tastematch_api.middleware import RequestIdFilter, SamplingFilter  # type: ignore
 
 # Tentative d'import du formatter JSON; fallback console si absent (évite crash avant installation dépendances)
 try:
@@ -192,27 +193,6 @@ LOG_SAMPLING_RATE = float(os.environ.get('LOG_SAMPLING_RATE', '1'))
 
 HOSTNAME = socket.gethostname()
 
-class RequestIdFilter:
-    """Ajoute un request_id au record si disponible (stocké en variable thread locale via middleware)."""
-    def filter(self, record):  # noqa: D401
-        from threading import local
-        _local = RequestIdMiddleware.local
-        record.request_id = getattr(_local, 'request_id', '-')
-        record.correlation_id = getattr(_local, 'correlation_id', record.request_id)
-        record.host = HOSTNAME
-        record.environment = 'DEBUG' if DEBUG else 'PROD'
-        return True
-
-class SamplingFilter:
-    """Filtre simple pour échantillonner les logs verbose en production."""
-    def filter(self, record):
-        if LOG_SAMPLING_RATE >= 1:
-            return True
-        import random
-        if record.levelno <= 10:  # DEBUG
-            return random.random() < LOG_SAMPLING_RATE
-        return True
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -266,26 +246,5 @@ LOGGING = {
     },
 }
 
-# -------------------------------------------------------------
-# Middleware pour request id
-# -------------------------------------------------------------
-from django.utils.deprecation import MiddlewareMixin  # noqa: E402
-from threading import local  # noqa: E402
-
-class RequestIdMiddleware(MiddlewareMixin):
-    local = local()
-    header_name = 'HTTP_X_REQUEST_ID'
-
-    def process_request(self, request):
-        rid = request.META.get(self.header_name) or str(uuid.uuid4())
-        self.local.request_id = rid
-        # Support d'un header de corrélation optionnel
-        self.local.correlation_id = request.META.get('HTTP_X_CORRELATION_ID', rid)
-
-    def process_response(self, request, response):
-        rid = getattr(self.local, 'request_id', None)
-        if rid:
-            response['X-Request-ID'] = rid
-        return response
-
-MIDDLEWARE.insert(1, 'tastematch_api.settings.RequestIdMiddleware')  # juste après Security / avant session
+if 'tastematch_api.middleware.RequestIdMiddleware' not in MIDDLEWARE:
+    MIDDLEWARE.insert(1, 'tastematch_api.middleware.RequestIdMiddleware')
