@@ -1332,18 +1332,14 @@ def get_user_social_profile(request):
     Récupère le profil social de l'utilisateur connecté
     """
     try:
-                from .models import UserProfile
-                from .serializers import SocialProfileSerializer
+        from .models import UserProfile
+        from .serializers import SocialProfileSerializer
+        profile, _ = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={'display_name': request.user.username}
+        )
+        return Response(SocialProfileSerializer(profile).data)
 
-                def _serialize(user):
-                    profile, _ = UserProfile.objects.get_or_create(
-                        user=user,
-                        defaults={'display_name': user.username}
-                    )
-                    return SocialProfileSerializer(profile).data
-
-                return Response(_serialize(request.user))
-        
     except Exception as e:
         logger.error(f"Social profile error: {e}")
         return Response(
@@ -1356,8 +1352,7 @@ def get_user_social_profile(request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([ScopedRateThrottle])
 def get_user_social_profile_me(request):
-    """Endpoint spécifique C1: GET /social/profile/me
-    Fournit le même payload que /social/profile/ (legacy)."""
+    """Endpoint spécifique C1: GET /social/profile/me – même payload que /social/profile/."""
     try:
         from .models import UserProfile
         from .serializers import SocialProfileSerializer
