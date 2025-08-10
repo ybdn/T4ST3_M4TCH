@@ -22,6 +22,10 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+# Constantes de validation des années pour la normalisation DTO
+MIN_VALID_YEAR = 1800
+MAX_VALID_YEAR = 2500
+
 
 class RecommendationService:
     """Service pour générer des recommandations personnalisées"""
@@ -124,28 +128,28 @@ class RecommendationService:
             # type
             if 'type' not in item:
                 item['type'] = item.get('content_type')
+            # Préparer metadata une seule fois
+            md = item.get('metadata', {}) or {}
             # thumbnail
             if 'thumbnail' not in item:
-                thumb = item.get('poster_url') or item.get('metadata', {}).get('poster_url')
-                item['thumbnail'] = thumb
+                item['thumbnail'] = item.get('poster_url') or md.get('poster_url')
             # year
             if 'year' not in item:
                 year = None
-                md = item.get('metadata', {}) or {}
                 # Chercher différentes clés de date
                 date_candidates = [
                     md.get('release_date'),
                     md.get('first_air_date'),
                     md.get('published_date'),
                     md.get('first_publish_year'),
-                    item.get('metadata', {}).get('publishedDate'),
-                    item.get('metadata', {}).get('published_date'),
+                    md.get('publishedDate'),  # variations possibles
+                    md.get('published_date'),
                 ]
                 for d in date_candidates:
                     if isinstance(d, str) and len(d) >= 4 and d[:4].isdigit():
                         year = int(d[:4])
                         break
-                    if isinstance(d, int) and 1800 < d < 2500:
+                    if isinstance(d, int) and MIN_VALID_YEAR < d < MAX_VALID_YEAR:
                         year = d
                         break
                 item['year'] = year
