@@ -180,7 +180,7 @@ class ThrottlingTestCase(APITestCase):
             # 201 attendu si création
             self.assertIn(resp.status_code, (201, 400))  # 400 si username existe collision improbable
         # Test valide si soit on a atteint un 429, soit on a créé plusieurs comptes sans erreur serveur
-        self.assertTrue(seen_429 or True)
+        self.assertTrue(seen_429)
     
     def test_config_endpoint_structure(self):
         """Test la structure de la réponse JSON"""
