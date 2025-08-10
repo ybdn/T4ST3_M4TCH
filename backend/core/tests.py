@@ -299,3 +299,229 @@ class FeatureFlagsServiceTestCase(APITestCase):
         # Les flags par défaut doivent toujours être présents
         self.assertIn('social_profile', feature_flags)
         self.assertIn('friend_system', feature_flags)
+
+
+class RecommendationServiceTestCase(TestCase):
+    """
+    Tests pour le service RecommendationService
+    """
+    
+    def setUp(self):
+        """Configuration des tests"""
+        from django.contrib.auth.models import User
+        from .models import UserPreference, List as TasteList, ListItem, ExternalReference, APICache
+        
+        # Créer un utilisateur de test
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        # Nettoyer le cache API
+        APICache.objects.all().delete()
+        
+        # Créer quelques préférences utilisateur pour filtrage
+        UserPreference.objects.create(
+            user=self.user,
+            external_id='liked_movie_123',
+            content_type='FILMS',
+            source='tmdb',
+            action='liked',
+            title='Film Aimé'
+        )
+        
+        UserPreference.objects.create(
+            user=self.user,
+            external_id='disliked_movie_456',
+            content_type='FILMS',
+            source='tmdb', 
+            action='disliked',
+            title='Film Pas Aimé'
+        )
+        
+        # Créer une liste avec un contenu
+        taste_list = TasteList.objects.create(
+            name='Ma Liste Films',
+            category='FILMS',
+            owner=self.user
+        )
+        
+        list_item = ListItem.objects.create(
+            title='Film dans Liste',
+            list=taste_list
+        )
+        
+        ExternalReference.objects.create(
+            list_item=list_item,
+            external_id='in_list_movie_789',
+            external_source='tmdb'
+        )
+    
+    def test_get_recommendations_returns_non_empty_list(self):
+        """Test que get_recommendations retourne une liste non vide"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        recommendations = service.get_recommendations(self.user, count=10)
+        
+        # Vérifier qu'on a des recommandations
+        self.assertGreater(len(recommendations), 0)
+        self.assertLessEqual(len(recommendations), 10)
+    
+    def test_get_recommendations_by_category(self):
+        """Test des recommandations par catégorie spécifique"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        
+        # Tester chaque catégorie
+        for category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
+            with self.subTest(category=category):
+                recommendations = service.get_recommendations(self.user, category=category, count=5)
+                
+                # Vérifier qu'on a des recommandations
+                self.assertGreater(len(recommendations), 0)
+                
+                # Vérifier que toutes les recommandations sont de la bonne catégorie
+                for item in recommendations:
+                    self.assertEqual(item['content_type'], category)
+    
+    def test_recommendations_have_required_fields(self):
+        """Test que les recommandations ont tous les champs requis"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        recommendations = service.get_recommendations(self.user, count=5)
+        
+        required_fields = ['external_id', 'content_type', 'source', 'title', 'compatibility_score']
+        
+        for item in recommendations:
+            for field in required_fields:
+                self.assertIn(field, item)
+                self.assertIsNotNone(item[field])
+    
+    def test_no_duplicate_external_ids(self):
+        """Test qu'il n'y a pas de doublons d'external_id"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        recommendations = service.get_recommendations(self.user, count=20)
+        
+        external_ids = [item['external_id'] for item in recommendations]
+        unique_ids = set(external_ids)
+        
+        # Pas de doublons (critère d'acceptation)
+        self.assertEqual(len(external_ids), len(unique_ids))
+    
+    def test_filter_user_content_excludes_seen_items(self):
+        """Test que _filter_user_content exclut correctement le contenu vu"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        
+        # Créer une liste d'items de test incluant du contenu déjà vu
+        test_items = [
+            {
+                'external_id': 'liked_movie_123',  # Déjà aimé
+                'content_type': 'FILMS',
+                'source': 'tmdb',
+                'title': 'Film Test 1'
+            },
+            {
+                'external_id': 'disliked_movie_456',  # Déjà pas aimé
+                'content_type': 'FILMS', 
+                'source': 'tmdb',
+                'title': 'Film Test 2'
+            },
+            {
+                'external_id': 'in_list_movie_789',  # Déjà dans une liste
+                'content_type': 'FILMS',
+                'source': 'tmdb', 
+                'title': 'Film Test 3'
+            },
+            {
+                'external_id': 'new_movie_999',  # Nouveau contenu
+                'content_type': 'FILMS',
+                'source': 'tmdb',
+                'title': 'Film Test 4'
+            }
+        ]
+        
+        filtered_items = service._filter_user_content(self.user, test_items)
+        
+        # Seul le nouveau contenu doit rester
+        self.assertEqual(len(filtered_items), 1)
+        self.assertEqual(filtered_items[0]['external_id'], 'new_movie_999')
+    
+    def test_compatibility_score_present(self):
+        """Test que le score de compatibilité est présent (placeholder acceptable)"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        recommendations = service.get_recommendations(self.user, count=5)
+        
+        for item in recommendations:
+            # Score présent et dans une fourchette raisonnable
+            self.assertIn('compatibility_score', item)
+            score = item['compatibility_score']
+            self.assertIsInstance(score, (int, float))
+            self.assertGreaterEqual(score, 0)
+            self.assertLessEqual(score, 100)
+    
+    def test_music_recommendations_return_mock_data(self):
+        """Test que les recommandations musique retournent des données mockées"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        music_items = service._get_music_recommendations(self.user, 5)
+        
+        # Vérifier qu'on a des données
+        self.assertGreater(len(music_items), 0)
+        
+        # Vérifier que c'est du contenu musical
+        for item in music_items:
+            self.assertEqual(item['content_type'], 'MUSIQUE')
+            self.assertEqual(item['source'], 'spotify')
+            self.assertIn('external_id', item)
+            self.assertIn('title', item)
+    
+    def test_fallback_data_when_no_api_keys(self):
+        """Test que les données de fallback sont utilisées quand les clés API ne sont pas disponibles"""
+        from .match_services import RecommendationService
+        
+        # Créer un service sans clés API
+        service = RecommendationService()
+        service.tmdb_api_key = ''
+        service.google_books_api_key = ''
+        
+        # Tester les films (devrait utiliser fallback)
+        movies = service._get_movie_recommendations(self.user, 3)
+        self.assertGreater(len(movies), 0)
+        for movie in movies:
+            self.assertEqual(movie['content_type'], 'FILMS')
+        
+        # Tester les livres (devrait utiliser fallback) 
+        books = service._get_book_recommendations(self.user, 3)
+        self.assertGreater(len(books), 0)
+        for book in books:
+            self.assertEqual(book['content_type'], 'LIVRES')
+    
+    def test_heterogeneous_recommendations(self):
+        """Test que les recommandations mélangent différentes catégories"""
+        from .match_services import RecommendationService
+        
+        service = RecommendationService()
+        recommendations = service.get_recommendations(self.user, count=12)
+        
+        # Vérifier qu'on a plusieurs catégories différentes
+        categories = set(item['content_type'] for item in recommendations)
+        self.assertGreater(len(categories), 1)  # Au moins 2 catégories différentes
+        
+        # Les catégories devraient être interleaved (pas toutes les mêmes en bloc)
+        first_half_categories = set(item['content_type'] for item in recommendations[:6])
+        second_half_categories = set(item['content_type'] for item in recommendations[6:])
+        
+        # Les deux moitiés devraient contenir des catégories variées
+        if len(recommendations) >= 8:  # Seulement si on a assez de recommandations
+            self.assertGreater(len(first_half_categories.intersection(second_half_categories)), 0)
