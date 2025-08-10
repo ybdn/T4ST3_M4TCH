@@ -5,8 +5,8 @@ from rest_framework import status, viewsets, serializers
 from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
-from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
-from .models import List, ListItem, ExternalReference
+from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer, FriendSerializer
+from .models import List, ListItem, ExternalReference, Friendship
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
 import json
@@ -1160,5 +1160,55 @@ def get_external_details(request, source, external_id):
         logger.error(f"External details error: {e}")
         return Response(
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# =====================================
+# SOCIAL ENDPOINTS
+# =====================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_friends_list(request):
+    """
+    Retourne la liste des amis acceptés de l'utilisateur connecté
+    """
+    try:
+        user = request.user
+        
+        # Récupérer toutes les amitiés acceptées où l'utilisateur est impliqué
+        # Soit il a envoyé la demande, soit il l'a reçue
+        accepted_friendships = Friendship.objects.filter(
+            Q(from_user=user, status=Friendship.Status.ACCEPTED) |
+            Q(to_user=user, status=Friendship.Status.ACCEPTED)
+        ).select_related('from_user', 'to_user')
+        
+        friends_data = []
+        
+        for friendship in accepted_friendships:
+            # Déterminer qui est l'ami (pas l'utilisateur connecté)
+            if friendship.from_user == user:
+                friend_user = friendship.to_user
+            else:
+                friend_user = friendship.from_user
+            
+            friends_data.append({
+                'id': friend_user.id,
+                'username': friend_user.username,
+                'email': friend_user.email,
+                'friendship_id': friendship.id,
+                'friendship_created_at': friendship.created_at
+            })
+        
+        return Response({
+            'friends': friends_data,
+            'total': len(friends_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Friends list error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération de la liste d\'amis: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

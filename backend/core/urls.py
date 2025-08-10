@@ -6,7 +6,8 @@ from .views import (
     search_items, get_suggestions, quick_add_item,
     search_external, get_trending_external, enrich_list_item, 
     import_from_external, get_external_details,
-    get_trending_suggestions, get_similar_suggestions
+    get_trending_suggestions, get_similar_suggestions,
+    get_friends_list
 )
 
 router = DefaultRouter()

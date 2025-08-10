@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem, ExternalReference
+from .models import List, ListItem, ExternalReference, Friendship
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -91,3 +91,25 @@ class ListSerializer(serializers.ModelSerializer):
             validated_data['description'] = List.get_default_description(validated_data['category'])
         
         return super().create(validated_data)
+
+
+class FriendSerializer(serializers.ModelSerializer):
+    """Serializer pour afficher les informations d'un ami"""
+    id = serializers.IntegerField(source='id')
+    username = serializers.CharField(source='username')
+    email = serializers.EmailField(source='email')
+    
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email')
+
+
+class FriendshipSerializer(serializers.ModelSerializer):
+    """Serializer pour les relations d'amitié"""
+    friend = FriendSerializer(read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = Friendship
+        fields = ('id', 'friend', 'status', 'status_display', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'created_at', 'updated_at')

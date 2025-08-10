@@ -231,3 +231,47 @@ class APICache(models.Model):
     def clean_expired(cls):
         """Nettoie les entrées de cache expirées"""
         return cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class Friendship(models.Model):
+    """Modèle pour gérer les relations d'amitié entre utilisateurs"""
+    
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'En attente'
+        ACCEPTED = 'ACCEPTED', 'Accepté'
+        REJECTED = 'REJECTED', 'Rejeté'
+    
+    from_user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='friendships_sent',
+        verbose_name="Utilisateur émetteur"
+    )
+    to_user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='friendships_received',
+        verbose_name="Utilisateur destinataire"
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="Statut"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
+    
+    class Meta:
+        verbose_name = "Amitié"
+        verbose_name_plural = "Amitiés"
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['from_user', 'to_user'], 
+                name='unique_friendship_per_pair'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.get_status_display()})"
