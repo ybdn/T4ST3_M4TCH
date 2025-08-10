@@ -15,7 +15,7 @@ class MatchActionEndpointTestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alice', password='secret')
         # Obtenir un token JWT
-        obtain_url = '/api/auth/token/'
+        obtain_url = reverse('token_obtain_pair')
         resp = self.client.post(obtain_url, {'username': 'alice', 'password': 'secret'}, format='json')
         if resp.status_code == 200 and 'access' in resp.data:
             token = resp.data['access']

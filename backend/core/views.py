@@ -1240,7 +1240,7 @@ def submit_match_action(request):
             'metadata': metadata
         }
 
-        preference, created, changed_action = recommendation_service.mark_content_as_seen(
+        preference, created, changed_action, previous_action = recommendation_service.mark_content_as_seen(
             user=request.user,
             content=content,
             action=action,
@@ -1254,8 +1254,8 @@ def submit_match_action(request):
             'updated': changed_action and not created
         }
 
-        # Ajout à la liste si action added (création ou changement vers added seulement)
-        if action == UserPreference.Action.ADDED and (created or changed_action):
+        # Ajout à la liste si final = ADDED ET (création ou transition vers ADDED depuis autre chose)
+        if action == UserPreference.Action.ADDED and (created or (changed_action and previous_action != UserPreference.Action.ADDED)):
             try:
                 list_obj, _ = List.objects.get_or_create(
                     owner=request.user,
@@ -1294,11 +1294,10 @@ def submit_match_action(request):
                 logger.warning(f"Could not add to list: {add_error}")
 
         return Response(response_data, status=status.HTTP_201_CREATED)
-        
     except Exception as e:
         logger.error(f"Match action error: {e}")
         return Response(
-            {'error': f'Erreur lors de l\'enregistrement de l\'action: {str(e)}'},
+            {'error': f"Erreur lors de l'enregistrement de l'action: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

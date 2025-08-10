@@ -8,7 +8,7 @@ import random
 import time
 import logging
 import hashlib
-from typing import List as TypingList, Dict, Optional
+from typing import List as TypingList, Dict, Any, Optional
 from django.contrib.auth.models import User
 from django.db.models import Q, Count, Avg
 from django.conf import settings
@@ -372,10 +372,22 @@ class RecommendationService:
         base_score += random.uniform(-10, 10)
         return max(0, min(100, base_score))
     
+    def _apply_profile_stats(self, profile: 'UserProfile', action: str, created: bool, changed_action: bool, previous_action: Optional[str]):
+        """Met à jour les statistiques du profil utilisateur de manière idempotente.
+        Règles:
+        - total_matches augmente uniquement lors de la première création de préférence.
+        - successful_matches augmente si on passe à ADDED (création avec ADDED ou transition depuis une action différente de ADDED).
+        """
+        if created:
+            profile.total_matches += 1
+        if action == UserPreference.Action.ADDED and (created or (changed_action and previous_action != UserPreference.Action.ADDED)):
+            profile.successful_matches += 1
+        profile.save()
+
     def mark_content_as_seen(self, user: User, content: Dict, action: str, return_status: bool = False):
-        """Upsert d'une UserPreference avec logique idempotente sur les statistiques.
+        """Upsert d'une UserPreference avec logique idempotente.
         Retourne par défaut l'objet preference. Si return_status=True, retourne
-        (preference, created, changed_action).
+        (preference, created, changed_action, previous_action).
         """
         created = False
         changed_action = False
@@ -397,7 +409,7 @@ class RecommendationService:
                 metadata=content.get('metadata', {})
             )
             created = True
-            changed_action = True  # première action
+            changed_action = True  # première action (= création)
         else:
             previous_action = preference.action
             # Mettre à jour uniquement si quelque chose change
@@ -413,17 +425,12 @@ class RecommendationService:
                 preference.metadata = content.get('metadata', {})
                 preference.save()
 
-        # Gestion stats profil (idempotent)
+        # Gestion stats profil via helper idempotent
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        if created:
-            profile.total_matches += 1  # première interaction sur ce contenu
-        # successful_matches uniquement si on passe à added (création ou changement)
-        if action == UserPreference.Action.ADDED and (created or (changed_action and previous_action != UserPreference.Action.ADDED)):
-            profile.successful_matches += 1
-        profile.save()
+        self._apply_profile_stats(profile, action, created, changed_action, previous_action)
 
         if return_status:
-            return preference, created, changed_action
+            return preference, created, changed_action, previous_action
         return preference
 
 
