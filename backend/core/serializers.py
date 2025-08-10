@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem, ExternalReference, UserPreference
+from .models import List, ListItem, ExternalReference, UserPreference, UserProfile, Friendship
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -181,3 +181,37 @@ class MatchActionSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
     # Pas de create/update: ce serializer est strictement pour validation d'entrée.
+
+
+class SocialProfileSerializer(serializers.ModelSerializer):
+    """Serializer pour exposer le profil social + statistiques agrégées.
+    Fournit friends_count & pending_requests dynamiquement (pas stockés dans UserProfile).
+    """
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    stats = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = (
+            'user_id', 'username', 'gamertag', 'display_name', 'bio', 'avatar_url',
+            'is_public', 'stats', 'created_at'
+        )
+        read_only_fields = fields
+
+    def get_stats(self, obj):
+        # Comptage des amis acceptés (get_friends retourne déjà une liste)
+        friends = Friendship.get_friends(obj.user)
+        friends_count = len(friends)
+        # Demandes reçues en attente
+        pending_requests = Friendship.objects.filter(
+            addressee=obj.user,
+            status=Friendship.Status.PENDING
+        ).count()
+        return {
+            'total_matches': obj.total_matches,
+            'successful_matches': obj.successful_matches,
+            'friends_count': friends_count,
+            'pending_requests': pending_requests
+        }
+
