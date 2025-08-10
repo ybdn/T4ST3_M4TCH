@@ -13,7 +13,9 @@ from .views import (
     add_friend_by_gamertag, get_friends_list, get_friend_requests,
     respond_friend_request, search_user_by_gamertag, delete_friend,
     create_versus_match, get_versus_matches,
-    get_versus_match_session, submit_versus_choice, get_versus_match_results
+    get_versus_match_session, submit_versus_choice, get_versus_match_results,
+    # Configuration endpoint
+    get_config
 )
 
 router = DefaultRouter()

@@ -1968,3 +1968,49 @@ def get_versus_match_results(request, match_id):
             {'error': f'Erreur lors de la récupération des résultats: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_config(request):
+    """
+    Endpoint de configuration pour le frontend
+    Expose les feature flags, informations de build et version
+    """
+    import os
+    from datetime import datetime
+    from django.conf import settings
+    
+    # Feature flags par défaut (pour l'instant depuis settings, plus tard depuis modèle)
+    default_feature_flags = {
+        'social_profile': True,
+        'friend_system': True,
+        'versus_match': True,
+        'external_apis': True,
+        'recommendations': True
+    }
+    
+    # Récupérer les feature flags depuis les settings ou utiliser les defaults
+    feature_flags = getattr(settings, 'FEATURE_FLAGS', default_feature_flags)
+    
+    # Information de build
+    build_info = {
+        'hash': os.environ.get('GIT_SHA', 'unknown'),
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # Version de l'API
+    api_version = '1.0.0'
+    
+    config_data = {
+        'feature_flags': feature_flags,
+        'build': build_info,
+        'version': api_version
+    }
+    
+    response = Response(config_data, status=status.HTTP_200_OK)
+    
+    # Ajouter les headers de cache (max-age de 60 secondes)
+    response['Cache-Control'] = 'public, max-age=60'
+    
+    return response
