@@ -2052,3 +2052,24 @@ def get_config(request):
     response['Cache-Control'] = 'public, max-age=60'
     
     return response
+
+# -----------------------------------------------------------
+# Association explicite des scopes de throttling (issue #27)
+# -----------------------------------------------------------
+try:  # Attribution après définition des vues
+    register_user.throttle_scope = 'register'
+    search_items.throttle_scope = 'search'
+    get_suggestions.throttle_scope = 'search'
+    quick_add_item.throttle_scope = 'match_action'
+    get_match_recommendations.throttle_scope = 'match_action'
+    submit_match_action.throttle_scope = 'match_action'
+    # External / enrichment
+    search_external.throttle_scope = 'external'
+    get_trending_external.throttle_scope = 'external'
+    import_from_external.throttle_scope = 'external'
+    get_external_details.throttle_scope = 'external'
+    enrich_list_item.throttle_scope = 'external'
+    get_trending_suggestions.throttle_scope = 'external'
+    get_similar_suggestions.throttle_scope = 'external'
+except NameError:  # pragma: no cover
+    pass
