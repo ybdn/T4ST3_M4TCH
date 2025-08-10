@@ -85,11 +85,11 @@ export const useMatchRecommendations = (initialParams?: {
           poster_url: r.poster_url as string | undefined,
           ...((r.metadata as Record<string, unknown>) || {}),
         },
-        // Score simulé si absent (UI attend un pourcentage)
+        // Score déterministe simulé si absent (UI attend un pourcentage)
         compatibility_score:
           typeof r.compatibility_score === "number"
             ? r.compatibility_score
-            : Math.round(60 + Math.random() * 40),
+            : 80, // Valeur fixe pour testabilité et comportement prévisible
       };
     },
     []
