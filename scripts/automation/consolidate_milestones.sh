@@ -24,14 +24,17 @@ if [[ -z "$short_numbers" ]]; then
   echo "Aucun milestone court trouvé. Rien à faire."; exit 0
 fi
 
-declare -A target_names=(
-  [M1]="M1 - Core Match Alpha"
-  [M2]="M2 - Social v1"
-  [M3]="M3 - Versus v1"
-  [M4]="M4 - Qualité/Obs"
-  [M5]="M5 - Bêta Fermée"
-  [M6]="M6 - Bêta Elargie"
-)
+map_target() {
+  case "$1" in
+    M1) echo "M1 - Core Match Alpha";;
+    M2) echo "M2 - Social v1";;
+    M3) echo "M3 - Versus v1";;
+    M4) echo "M4 - Qualité/Obs";;
+    M5) echo "M5 - Bêta Fermée";;
+    M6) echo "M6 - Bêta Elargie";;
+    *) return 1;;
+  esac
+}
 
 changed=0
 
@@ -40,7 +43,7 @@ for code in M1 M2 M3 M4 M5 M6; do
   if [[ -z "${short_ms_num:-}" ]]; then
     continue
   fi
-  target_name="${target_names[$code]:-}"
+  target_name=$(map_target "$code" || true)
   if [[ -z "$target_name" ]]; then
     echo "Mapping manquant pour $code" >&2; continue; fi
   # Vérifie existence du milestone cible
