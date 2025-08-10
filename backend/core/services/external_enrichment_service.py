@@ -327,7 +327,8 @@ class ExternalEnrichmentService:
                 'poster_url': data.get('poster_url'),
                 'backdrop_url': data.get('backdrop_url'),
                 'rating': data.get('rating'),
-                'metadata': self._clean_metadata(data)
+                'metadata': self._clean_metadata(data),
+                'user': list_item.list.owner  # Explicitly set user for performance
             }
             
             # Gérer la date de sortie

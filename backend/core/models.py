@@ -99,6 +99,14 @@ class ExternalReference(models.Model):
         related_name='external_ref',
         verbose_name="Élément de liste"
     )
+    # Denormalized user field for performance optimization
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='external_references',
+        verbose_name="Utilisateur",
+        help_text="Denormalized from list_item.list.owner for faster queries"
+    )
     external_id = models.CharField(
         max_length=100, 
         verbose_name="ID externe"
@@ -152,6 +160,11 @@ class ExternalReference(models.Model):
                 name='unique_external_reference'
             ),
         ]
+        indexes = [
+            # Composite index for fast user-based queries
+            models.Index(fields=['user', 'external_id'], name='user_external_id_idx'),
+            models.Index(fields=['user', 'external_source'], name='user_external_source_idx'),
+        ]
     
     def __str__(self):
         return f"{self.list_item.title} → {self.get_external_source_display()} ({self.external_id})"
@@ -159,6 +172,37 @@ class ExternalReference(models.Model):
     def needs_refresh(self, days=7):
         """Vérifie si les données doivent être actualisées"""
         return self.last_updated < timezone.now() - timedelta(days=days)
+    
+    def save(self, *args, **kwargs):
+        """Override save to automatically set user field from list_item.list.owner"""
+        if not self.user_id and self.list_item_id:
+            self.user = self.list_item.list.owner
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def user_has_external_id(cls, user, external_id, external_source=None):
+        """Check if user already has this external_id (optimized query using index)"""
+        queryset = cls.objects.filter(user=user, external_id=external_id)
+        if external_source:
+            queryset = queryset.filter(external_source=external_source)
+        return queryset.exists()
+    
+    @classmethod
+    def get_user_external_refs(cls, user, external_source=None):
+        """Get all external references for a user (optimized query using index)"""
+        queryset = cls.objects.filter(user=user)
+        if external_source:
+            queryset = queryset.filter(external_source=external_source)
+        return queryset.select_related('list_item__list')
+    
+    @classmethod
+    def exclude_user_external_ids(cls, user, external_ids, external_source=None):
+        """Get external_ids not already added by user (optimized exclusion query)"""
+        queryset = cls.objects.filter(user=user, external_id__in=external_ids)
+        if external_source:
+            queryset = queryset.filter(external_source=external_source)
+        existing_ids = set(queryset.values_list('external_id', flat=True))
+        return [eid for eid in external_ids if eid not in existing_ids]
 
 
 class APICache(models.Model):
