@@ -166,9 +166,7 @@ const ListsPage: React.FC<ListsPageProps> = ({ onNavigate }) => {
     return item.external_ref?.poster_url || null;
   };
 
-  const getBackdropUrl = (item: ListItem): string | null => {
-    return item.external_ref?.backdrop_url || null;
-  };
+  // backdrops non utilisés actuellement
 
   const getGenres = (item: ListItem): string[] => {
     return item.external_ref?.genres || [];
