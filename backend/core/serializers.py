@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem, ExternalReference
+from .models import List, ListItem, ExternalReference, BetaInvite
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -16,10 +16,33 @@ class RegisterSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'},
         label="Confirm password"
     )
+    beta_token = serializers.CharField(
+        write_only=True,
+        required=True,
+        help_text="Token d'invitation bêta"
+    )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password2')
+        fields = ('username', 'email', 'password', 'password2', 'beta_token')
+
+    def validate_beta_token(self, value):
+        """Valide le token d'invitation bêta"""
+        invitation = BetaInvite.validate_token(value)
+        if not invitation:
+            raise serializers.ValidationError("Token d'invitation invalide ou expiré.")
+        return value
+
+    def validate_email(self, value):
+        """Valide que l'email correspond à celui de l'invitation"""
+        beta_token = self.initial_data.get('beta_token')
+        if beta_token:
+            invitation = BetaInvite.validate_token(beta_token)
+            if invitation and invitation.email.lower() != value.lower():
+                raise serializers.ValidationError(
+                    "L'email doit correspondre à celui de l'invitation."
+                )
+        return value
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -30,8 +53,46 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        beta_token = validated_data.pop('beta_token')
+        invitation = BetaInvite.validate_token(beta_token)
+        
+        if not invitation:
+            raise serializers.ValidationError("Token d'invitation invalide.")
+        
+        # Créer l'utilisateur
         user = User.objects.create_user(**validated_data)
+        
+        # Marquer l'invitation comme utilisée
+        invitation.mark_as_used(user)
+        
         return user
+
+
+class BetaInviteSerializer(serializers.ModelSerializer):
+    """Serializer pour les invitations bêta (usage administratif)"""
+    
+    class Meta:
+        model = BetaInvite
+        fields = (
+            'id', 'email', 'token', 'created_at', 'expires_at', 
+            'used_at', 'used_by', 'created_by', 'notes',
+            'is_expired', 'is_used', 'is_valid'
+        )
+        read_only_fields = (
+            'id', 'token', 'created_at', 'used_at', 'used_by', 
+            'is_expired', 'is_used', 'is_valid'
+        )
+
+
+class ValidateInviteSerializer(serializers.Serializer):
+    """Serializer pour valider une invitation sans créer d'utilisateur"""
+    token = serializers.CharField(required=True)
+    
+    def validate_token(self, value):
+        invitation = BetaInvite.validate_token(value)
+        if not invitation:
+            raise serializers.ValidationError("Token d'invitation invalide ou expiré.")
+        return value
 
 
 class ListItemSerializer(serializers.ModelSerializer):

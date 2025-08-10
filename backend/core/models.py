@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+import secrets
+import string
 
 
 class List(models.Model):
@@ -231,3 +233,149 @@ class APICache(models.Model):
     def clean_expired(cls):
         """Nettoie les entrées de cache expirées"""
         return cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class BetaInvite(models.Model):
+    """Modèle pour gérer les invitations bêta avec contrôle d'accès"""
+    
+    email = models.EmailField(
+        verbose_name="Email de l'invité",
+        help_text="Email de la personne invitée"
+    )
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        verbose_name="Token d'invitation",
+        help_text="Token unique pour valider l'invitation"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    expires_at = models.DateTimeField(
+        verbose_name="Date d'expiration",
+        help_text="Date à laquelle le token expire"
+    )
+    used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date d'utilisation",
+        help_text="Date à laquelle l'invitation a été utilisée"
+    )
+    used_by = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='beta_invitation',
+        verbose_name="Utilisateur créé",
+        help_text="Utilisateur qui a utilisé cette invitation"
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='sent_invitations',
+        verbose_name="Créé par",
+        help_text="Administrateur qui a créé cette invitation"
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name="Notes",
+        help_text="Notes administratives sur cette invitation"
+    )
+    
+    class Meta:
+        verbose_name = "Invitation bêta"
+        verbose_name_plural = "Invitations bêta"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['email']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        status = "Utilisée" if self.is_used else ("Expirée" if self.is_expired else "Active")
+        return f"{self.email} - {status}"
+    
+    @property
+    def is_expired(self):
+        """Vérifie si l'invitation est expirée"""
+        return timezone.now() > self.expires_at
+    
+    @property
+    def is_used(self):
+        """Vérifie si l'invitation a été utilisée"""
+        return self.used_at is not None
+    
+    @property
+    def is_valid(self):
+        """Vérifie si l'invitation est valide (non expirée et non utilisée)"""
+        return not self.is_expired and not self.is_used
+    
+    def save(self, *args, **kwargs):
+        """Génère automatiquement un token et une date d'expiration si nécessaire"""
+        if not self.token:
+            self.token = self._generate_unique_token()
+        
+        if not self.expires_at:
+            # Par défaut, le token expire dans 7 jours
+            self.expires_at = timezone.now() + timedelta(days=7)
+        
+        super().save(*args, **kwargs)
+    
+    def _generate_unique_token(self):
+        """Génère un token unique"""
+        while True:
+            # Génère un token de 32 caractères (lettres et chiffres)
+            token = ''.join(secrets.choice(string.ascii_letters + string.digits) 
+                          for _ in range(32))
+            if not BetaInvite.objects.filter(token=token).exists():
+                return token
+    
+    def mark_as_used(self, user):
+        """Marque l'invitation comme utilisée par un utilisateur"""
+        if self.is_used:
+            raise ValueError("Cette invitation a déjà été utilisée")
+        
+        if self.is_expired:
+            raise ValueError("Cette invitation a expiré")
+        
+        self.used_at = timezone.now()
+        self.used_by = user
+        self.save()
+    
+    @classmethod
+    def create_invitation(cls, email, created_by=None, expires_in_days=7, notes=""):
+        """Méthode utilitaire pour créer une nouvelle invitation"""
+        expires_at = timezone.now() + timedelta(days=expires_in_days)
+        return cls.objects.create(
+            email=email,
+            expires_at=expires_at,
+            created_by=created_by,
+            notes=notes
+        )
+    
+    @classmethod
+    def validate_token(cls, token):
+        """Valide un token et retourne l'invitation si valide"""
+        try:
+            invitation = cls.objects.get(token=token)
+            if invitation.is_valid:
+                return invitation
+            return None
+        except cls.DoesNotExist:
+            return None
+    
+    @classmethod
+    def clean_expired_invitations(cls):
+        """Nettoie les invitations expirées (garde un historique des utilisées)"""
+        expired_unused = cls.objects.filter(
+            expires_at__lt=timezone.now(),
+            used_at__isnull=True
+        )
+        count = expired_unused.count()
+        expired_unused.delete()
+        return count

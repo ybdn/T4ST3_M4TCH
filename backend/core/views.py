@@ -5,8 +5,8 @@ from rest_framework import status, viewsets, serializers
 from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
-from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
-from .models import List, ListItem, ExternalReference
+from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer, ValidateInviteSerializer, BetaInviteSerializer
+from .models import List, ListItem, ExternalReference, BetaInvite
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
 import json
@@ -25,6 +25,34 @@ def health_check(request):
         {"status": "ok", "message": "API is running"},
         status=status.HTTP_200_OK
     )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def validate_beta_invite(request):
+    """
+    Valide un token d'invitation bêta sans créer d'utilisateur
+    Body: {"token": "invitation_token"}
+    """
+    serializer = ValidateInviteSerializer(data=request.data)
+    if serializer.is_valid():
+        token = serializer.validated_data['token']
+        invitation = BetaInvite.validate_token(token)
+        
+        if invitation:
+            return Response({
+                'valid': True,
+                'email': invitation.email,
+                'expires_at': invitation.expires_at,
+                'message': 'Token d\'invitation valide'
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'valid': False,
+                'message': 'Token d\'invitation invalide ou expiré'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
