@@ -75,6 +75,52 @@ La conception s'adresse à plusieurs types d'utilisateurs :
 - **Listes collaboratives** : Création de listes à plusieurs
 - **Système de badges et succès** : Gamification de l'engagement
 
+### 🧩 Endpoint Match Action (B2)
+
+Un nouvel endpoint permet maintenant d'enregistrer les actions utilisateur sur les recommandations afin d'alimenter les préférences et futures mécaniques de compatibilité.
+
+| Méthode | URL                  | Auth | Description |
+|---------|----------------------|------|-------------|
+| POST    | `/api/match/action/` | JWT  | Enregistre / met à jour une action utilisateur sur un contenu recommandé |
+
+#### Payload accepté (alias front inclus)
+
+```json
+{
+    "external_id": "fb_movie_001",
+    "source": "tmdb",
+    "category": "FILMS",          // alias accepté pour content_type
+    // ou "content_type": "FILMS",
+    "action": "like",             // alias normalisé -> liked
+    // valeurs acceptées (alias -> interne): like→liked, dislike→disliked, add→added, skip→skipped
+    "title": "Inception",
+    "metadata": { "popularity": 80 },
+    "description": "Thriller SF"   // optionnel (fusionné avec metadata.description)
+}
+```
+
+#### Réponse (201)
+
+```json
+{
+    "success": true,
+    "action": "liked",
+    "preference_id": 123,
+    "updated": false,            // true si changement d'action (ex: liked -> added)
+    "list_id": 5,                // présents uniquement si action == added et création list item
+    "list_item_id": 42
+}
+```
+
+#### Règles clés
+
+- Idempotent: répéter la même action ne crée pas de doublon (même preference_id, `updated=false`).
+- Changer d'action (ex: like -> add) met à jour la préférence (`updated=true`).
+- `added` déclenche la création (ou réutilisation) d'une liste catégorie + insertion item + référence externe.
+- Validation stricte: action inconnue => HTTP 400.
+
+Voir aussi `docs/match_action_endpoint.md` pour plus de détails.
+
 ## Stack technologique
 
 La stack est choisie pour une architecture découplée, moderne et scalable, prête pour une application web interactive.
