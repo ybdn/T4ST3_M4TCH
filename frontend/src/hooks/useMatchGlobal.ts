@@ -127,7 +127,7 @@ export const useMatchRecommendations = (initialParams?: {
         // Retirer l'élément courant et ajuster l'index si nécessaire
         setState((prev) => {
           const newData = prev.data.filter((_, i) => i !== currentIndex);
-            // Ajuster currentIndex pour ne pas sortir des bornes
+          // Ajuster currentIndex pour ne pas sortir des bornes
           setCurrentIndex((prevIdx) => {
             if (newData.length === 0) return 0;
             return Math.min(prevIdx, newData.length - 1);
