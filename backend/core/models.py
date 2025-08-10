@@ -231,3 +231,129 @@ class APICache(models.Model):
     def clean_expired(cls):
         """Nettoie les entrées de cache expirées"""
         return cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class VersusMatch(models.Model):
+    """Modèle pour les matchs de goûts entre utilisateurs"""
+    
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Actif'
+        FINISHED = 'finished', 'Terminé'
+        CANCELLED = 'cancelled', 'Annulé'
+    
+    user1 = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='matches_as_user1',
+        verbose_name="Utilisateur 1"
+    )
+    user2 = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='matches_as_user2',
+        verbose_name="Utilisateur 2"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        verbose_name="Statut"
+    )
+    compatibility_score = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name="Score de compatibilité"
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=List.Category.choices,
+        null=True,
+        blank=True,
+        verbose_name="Catégorie du match"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Date de mise à jour"
+    )
+    finished_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fin"
+    )
+    
+    class Meta:
+        verbose_name = "Match de goûts"
+        verbose_name_plural = "Matchs de goûts"
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user1', 'user2', 'category'],
+                name='unique_match_per_category_per_users'
+            ),
+        ]
+    
+    def __str__(self):
+        category_display = f" ({self.get_category_display()})" if self.category else ""
+        return f"Match {self.user1.username} vs {self.user2.username}{category_display} - {self.get_status_display()}"
+    
+    def get_other_user(self, current_user):
+        """Retourne l'autre utilisateur du match"""
+        if current_user == self.user1:
+            return self.user2
+        elif current_user == self.user2:
+            return self.user1
+        return None
+    
+    def mark_as_finished(self):
+        """Marque le match comme terminé"""
+        self.status = self.Status.FINISHED
+        self.finished_at = timezone.now()
+        self.save()
+    
+    def calculate_compatibility_score(self):
+        """Calcule le score de compatibilité basé sur les listes communes"""
+        if self.category:
+            # Score pour une catégorie spécifique
+            user1_items = set(
+                ListItem.objects.filter(
+                    list__owner=self.user1,
+                    list__category=self.category
+                ).values_list('title', flat=True)
+            )
+            user2_items = set(
+                ListItem.objects.filter(
+                    list__owner=self.user2,
+                    list__category=self.category
+                ).values_list('title', flat=True)
+            )
+        else:
+            # Score global toutes catégories
+            user1_items = set(
+                ListItem.objects.filter(
+                    list__owner=self.user1
+                ).values_list('title', flat=True)
+            )
+            user2_items = set(
+                ListItem.objects.filter(
+                    list__owner=self.user2
+                ).values_list('title', flat=True)
+            )
+        
+        if not user1_items and not user2_items:
+            return 0.0
+        
+        # Calcul basé sur l'intersection et l'union (coefficient de Jaccard)
+        intersection = len(user1_items.intersection(user2_items))
+        union = len(user1_items.union(user2_items))
+        
+        if union == 0:
+            return 0.0
+        
+        score = (intersection / union) * 100
+        self.compatibility_score = round(score, 2)
+        self.save()
+        return self.compatibility_score

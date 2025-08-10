@@ -6,7 +6,8 @@ from .views import (
     search_items, get_suggestions, quick_add_item,
     search_external, get_trending_external, enrich_list_item, 
     import_from_external, get_external_details,
-    get_trending_suggestions, get_similar_suggestions
+    get_trending_suggestions, get_similar_suggestions,
+    list_versus_matches, create_versus_match
 )
 
 router = DefaultRouter()
@@ -30,6 +31,9 @@ urlpatterns = [
     # Nouveaux endpoints pour les suggestions enrichies
     path('suggestions/trending/<str:category>/', get_trending_suggestions, name='get_trending_suggestions'),
     path('suggestions/similar/<int:item_id>/', get_similar_suggestions, name='get_similar_suggestions'),
+    # Endpoints pour les matchs versus
+    path('versus-matches/', list_versus_matches, name='list_versus_matches'),
+    path('versus-matches/create/', create_versus_match, name='create_versus_match'),
     # Nested routes for list items
     path('lists/<int:list_pk>/items/', ListItemViewSet.as_view({
         'get': 'list',

@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem, ExternalReference
+from .models import List, ListItem, ExternalReference, VersusMatch
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -91,3 +91,36 @@ class ListSerializer(serializers.ModelSerializer):
             validated_data['description'] = List.get_default_description(validated_data['category'])
         
         return super().create(validated_data)
+
+
+class VersusMatchSerializer(serializers.ModelSerializer):
+    user1_username = serializers.CharField(source='user1.username', read_only=True)
+    user2_username = serializers.CharField(source='user2.username', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    other_user = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = VersusMatch
+        fields = (
+            'id', 'user1', 'user2', 'user1_username', 'user2_username', 
+            'status', 'status_display', 'compatibility_score', 
+            'category', 'category_display', 'other_user',
+            'created_at', 'updated_at', 'finished_at'
+        )
+        read_only_fields = ('id', 'created_at', 'updated_at', 'finished_at')
+    
+    def get_other_user(self, obj):
+        """Retourne les informations de l'autre utilisateur du match"""
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        
+        other_user = obj.get_other_user(request.user)
+        if not other_user:
+            return None
+        
+        return {
+            'id': other_user.id,
+            'username': other_user.username
+        }

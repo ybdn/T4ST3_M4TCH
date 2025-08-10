@@ -5,8 +5,8 @@ from rest_framework import status, viewsets, serializers
 from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
-from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
-from .models import List, ListItem, ExternalReference
+from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer, VersusMatchSerializer
+from .models import List, ListItem, ExternalReference, VersusMatch
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
 import json
@@ -1162,3 +1162,117 @@ def get_external_details(request, source, external_id):
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_versus_matches(request):
+    """
+    Liste les matchs de goûts pour l'utilisateur connecté
+    Paramètres:
+    - status: filtre par statut (active, finished, cancelled)
+    - category: filtre par catégorie (optionnel)
+    - limit: nombre max de résultats (défaut: 20)
+    """
+    user = request.user
+    status_filter = request.GET.get('status', '').strip()
+    category_filter = request.GET.get('category', '').strip()
+    limit = min(int(request.GET.get('limit', 20)), 20)  # Max 20 pour éviter la pagination
+    
+    # Construire la requête pour récupérer les matchs de l'utilisateur
+    queryset = VersusMatch.objects.filter(
+        models.Q(user1=user) | models.Q(user2=user)
+    )
+    
+    # Appliquer les filtres
+    if status_filter and status_filter in [choice[0] for choice in VersusMatch.Status.choices]:
+        queryset = queryset.filter(status=status_filter)
+    
+    if category_filter and category_filter in [choice[0] for choice in List.Category.choices]:
+        queryset = queryset.filter(category=category_filter)
+    
+    # Trier par updated_at desc et limiter
+    matches = queryset.order_by('-updated_at')[:limit]
+    
+    # Sérialiser les résultats
+    serializer = VersusMatchSerializer(matches, many=True, context={'request': request})
+    
+    return Response({
+        'matches': serializer.data,
+        'total': len(serializer.data),
+        'status_filter': status_filter,
+        'category_filter': category_filter,
+        'limit': limit
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_versus_match(request):
+    """
+    Crée un nouveau match entre l'utilisateur connecté et un autre utilisateur
+    Body: {
+        "user_id": "ID de l'autre utilisateur",
+        "category": "FILMS|SERIES|MUSIQUE|LIVRES" (optionnel)
+    }
+    """
+    user = request.user
+    other_user_id = request.data.get('user_id')
+    category = request.data.get('category', '').strip()
+    
+    # Validation
+    if not other_user_id:
+        return Response(
+            {'error': 'L\'ID de l\'autre utilisateur est obligatoire'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        other_user = User.objects.get(id=other_user_id)
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur introuvable'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if other_user == user:
+        return Response(
+            {'error': 'Vous ne pouvez pas créer un match avec vous-même'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if category and category not in [choice[0] for choice in List.Category.choices]:
+        return Response(
+            {'error': 'Catégorie invalide'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Vérifier si un match existe déjà entre ces utilisateurs pour cette catégorie
+    existing_match = VersusMatch.objects.filter(
+        models.Q(user1=user, user2=other_user) | models.Q(user1=other_user, user2=user),
+        category=category if category else None
+    ).first()
+    
+    if existing_match:
+        return Response(
+            {'error': 'Un match existe déjà entre ces utilisateurs pour cette catégorie'},
+            status=status.HTTP_409_CONFLICT
+        )
+    
+    # Créer le match
+    match = VersusMatch.objects.create(
+        user1=user,
+        user2=other_user,
+        category=category if category else None
+    )
+    
+    # Calculer le score de compatibilité
+    match.calculate_compatibility_score()
+    
+    # Sérialiser et retourner
+    serializer = VersusMatchSerializer(match, context={'request': request})
+    
+    return Response({
+        'match': serializer.data,
+        'message': f'Match créé avec {other_user.username}'
+    }, status=status.HTTP_201_CREATED)
