@@ -107,7 +107,10 @@ class FeatureFlagsService:
         else:
             # Invalider tout le cache des flags
             # Note: Django cache n'a pas de pattern delete, donc on invalide manuellement
-            pass
+            for flag in FeatureFlag.objects.all():
+                cache_key = f"{cls.CACHE_PREFIX}{flag.name}"
+                cache.delete(cache_key)
+                logger.info(f"Cache invalidated for flag: {flag.name}")
         
         # Invalider le cache des flags globaux dans tous les cas
         cache.delete(cls.ALL_FLAGS_CACHE_KEY)
