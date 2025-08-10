@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 import dj_database_url
 from pathlib import Path
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -168,3 +170,73 @@ TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 GOOGLE_BOOKS_API_KEY = os.environ.get('GOOGLE_BOOKS_API_KEY')
+
+# Sentry Configuration
+SENTRY_DSN = os.environ.get('SENTRY_DSN')
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(
+                transaction_style='url',
+                middleware_spans=True,
+                signals_spans=False,
+            ),
+        ],
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        traces_sample_rate=0.1,  # 10% sampling for performance
+        
+        # Set profiles_sample_rate to 1.0 to profile 100%
+        # of sampled transactions.
+        profiles_sample_rate=0.1,  # 10% profiling
+        
+        # Send personal identifiable information
+        send_default_pii=False,
+        
+        # Filter sensitive data
+        before_send=lambda event, hint: filter_sensitive_data(event),
+        
+        # Set environment
+        environment=os.environ.get('ENVIRONMENT', 'development'),
+    )
+
+def filter_sensitive_data(event):
+    """
+    Filter sensitive data from Sentry events to prevent PII leaks.
+    """
+    if 'request' in event:
+        request = event['request']
+        
+        # Remove sensitive headers
+        if 'headers' in request:
+            sensitive_headers = ['authorization', 'cookie', 'x-api-key', 'x-auth-token']
+            for header in sensitive_headers:
+                if header in request['headers']:
+                    request['headers'][header] = '[Filtered]'
+        
+        # Remove sensitive query parameters
+        if 'query_string' in request:
+            sensitive_params = ['password', 'token', 'api_key', 'secret']
+            for param in sensitive_params:
+                if param in request.get('query_string', ''):
+                    request['query_string'] = '[Filtered]'
+        
+        # Remove sensitive form data
+        if 'data' in request:
+            if isinstance(request['data'], dict):
+                sensitive_fields = ['password', 'secret', 'token', 'api_key', 'email', 'phone']
+                for field in sensitive_fields:
+                    if field in request['data']:
+                        request['data'][field] = '[Filtered]'
+    
+    # Remove sensitive user data
+    if 'user' in event:
+        user = event['user']
+        sensitive_user_fields = ['email', 'ip_address']
+        for field in sensitive_user_fields:
+            if field in user:
+                user[field] = '[Filtered]'
+    
+    return event

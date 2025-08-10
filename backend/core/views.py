@@ -26,6 +26,15 @@ def health_check(request):
         status=status.HTTP_200_OK
     )
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sentry_test_error(request):
+    """
+    Test endpoint to generate an error for Sentry monitoring validation.
+    """
+    logger.info("Sentry test error endpoint called")
+    raise Exception("Test error for Sentry integration - this is intentional for monitoring purposes")
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):

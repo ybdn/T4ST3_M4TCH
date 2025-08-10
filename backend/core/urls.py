@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    health_check, register_user, get_user_profile, 
+    health_check, sentry_test_error, register_user, get_user_profile, 
     ListViewSet, ListItemViewSet,
     search_items, get_suggestions, quick_add_item,
     search_external, get_trending_external, enrich_list_item, 
@@ -15,6 +15,7 @@ router.register(r'list-items', ListItemViewSet, basename='listitem')
 
 urlpatterns = [
     path('health/', health_check, name='health_check'),
+    path('sentry-test/', sentry_test_error, name='sentry_test_error'),
     path('auth/register/', register_user, name='auth_register'),
     path('users/me/', get_user_profile, name='user_profile'),
     # Search and suggestions endpoints
