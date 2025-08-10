@@ -9,3 +9,6 @@ djangorestframework-simplejwt
 requests
 dj-database-url
 # (doublon psycopg2-binary supprimé)
+
+# Logging structuré
+python-json-logger
