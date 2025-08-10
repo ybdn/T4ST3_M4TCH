@@ -180,8 +180,4 @@ class MatchActionSerializer(serializers.Serializer):
         # Laisser Serializer faire le gros du travail
         return super().to_internal_value(data)
 
-    def create(self, validated_data):  # non utilisé (gestion via service)
-        raise NotImplementedError("MatchActionSerializer ne gère pas create().")
-
-    def update(self, instance, validated_data):  # non utilisé
-        raise NotImplementedError("MatchActionSerializer ne gère pas update().")
+    # Pas de create/update: ce serializer est strictement pour validation d'entrée.

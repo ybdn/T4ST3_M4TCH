@@ -1254,8 +1254,15 @@ def submit_match_action(request):
             'updated': changed_action and not created
         }
 
-        # Ajout à la liste si final = ADDED ET (création ou transition vers ADDED depuis autre chose)
-        if action == UserPreference.Action.ADDED and (created or (changed_action and previous_action != UserPreference.Action.ADDED)):
+        # Ajout à la liste si la logique métier le requiert
+        def _should_add_to_list(final_action, was_created, did_change, prev_action):
+            return (
+                final_action == UserPreference.Action.ADDED and (
+                    was_created or (did_change and prev_action != UserPreference.Action.ADDED)
+                )
+            )
+
+        if _should_add_to_list(action, created, changed_action, previous_action):
             try:
                 list_obj, _ = List.objects.get_or_create(
                     owner=request.user,

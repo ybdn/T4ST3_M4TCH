@@ -409,7 +409,8 @@ class RecommendationService:
                 metadata=content.get('metadata', {})
             )
             created = True
-            changed_action = True  # première action (= création)
+            # changed_action = True car il n'y avait pas d'action préalable
+            changed_action = True  # création initiale
         else:
             previous_action = preference.action
             # Mettre à jour uniquement si quelque chose change
