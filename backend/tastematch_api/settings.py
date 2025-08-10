@@ -171,7 +171,35 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # Ajout du throttling global + scoped (issue #27)
+    # Activable/désactivable via RATE_LIMIT_ENABLED (par défaut True en production)
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
 }
+
+# Configuration des limites de taux (valeurs adaptées dev vs prod)
+RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'True').lower() == 'true'
+
+if RATE_LIMIT_ENABLED:
+    # Valeurs par défaut raisonnables; peuvent être surchargées via env vars individuelles
+    DEBUG_THROTTLE_MULTIPLIER = 50 if DEBUG else 1  # en DEBUG on « relâche » fortement
+    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+        'anon': os.environ.get('THROTTLE_ANON', f"{100 * DEBUG_THROTTLE_MULTIPLIER}/day"),
+        'user': os.environ.get('THROTTLE_USER', f"{1000 * DEBUG_THROTTLE_MULTIPLIER}/day"),
+        # Scopes sensibles
+        'auth': os.environ.get('THROTTLE_AUTH', f"{20 * DEBUG_THROTTLE_MULTIPLIER}/minute"),
+        'auth_refresh': os.environ.get('THROTTLE_AUTH_REFRESH', f"{60 * DEBUG_THROTTLE_MULTIPLIER}/hour"),
+        'register': os.environ.get('THROTTLE_REGISTER', f"{10 * DEBUG_THROTTLE_MULTIPLIER}/hour"),
+        'search': os.environ.get('THROTTLE_SEARCH', f"{120 * DEBUG_THROTTLE_MULTIPLIER}/minute"),
+        'match_action': os.environ.get('THROTTLE_MATCH_ACTION', f"{300 * DEBUG_THROTTLE_MULTIPLIER}/minute"),
+        'external': os.environ.get('THROTTLE_EXTERNAL', f"{60 * DEBUG_THROTTLE_MULTIPLIER}/minute"),
+    }
+else:  # pragma: no cover - cas désactivation explicite
+    # En cas de désactivation on supprime effectivement les classes de throttling
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 
 # External APIs configuration (from environment)
 TMDB_API_KEY = os.environ.get('TMDB_API_KEY')

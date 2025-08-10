@@ -1,4 +1,5 @@
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.decorators import api_view, permission_classes, action, throttle_classes
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, viewsets, serializers
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
 def health_check(request):
     """
     Returns a simple JSON response to indicate that the API is running.
@@ -29,6 +31,7 @@ def health_check(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
 def register_user(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
@@ -187,6 +190,7 @@ class ListItemViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def search_items(request):
     """
     Recherche d'éléments avec auto-complétion
@@ -258,6 +262,7 @@ def search_items(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_suggestions(request):
     """
     Suggestions d'éléments populaires par catégorie
@@ -302,6 +307,7 @@ def get_suggestions(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def quick_add_item(request):
     """
     Ajout rapide d'un élément à une liste
@@ -518,6 +524,7 @@ def _get_generic_suggestions(query, category, limit):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_trending_external(request):
     """
     Récupère le contenu tendance des APIs externes
@@ -549,6 +556,7 @@ def get_trending_external(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def enrich_list_item(request, list_pk, item_pk):
     """
     Enrichit un élément de liste existant avec des métadonnées externes
@@ -603,6 +611,7 @@ def enrich_list_item(request, list_pk, item_pk):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def import_from_external(request):
     """
     Importe directement depuis un ID externe
@@ -669,6 +678,7 @@ def import_from_external(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_external_details(request, source, external_id):
     """
     Récupère les détails complets d'un élément externe
@@ -714,6 +724,7 @@ def get_external_details(request, source, external_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_trending_suggestions(request, category):
     """
     Suggestions basées sur le contenu tendance des APIs externes
@@ -741,6 +752,7 @@ def get_trending_suggestions(request, category):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_similar_suggestions(request, item_id):
     """
     Suggestions similaires basées sur un élément existant
@@ -782,6 +794,7 @@ def get_similar_suggestions(request, item_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def search_external(request):
     """
     Recherche dans les APIs externes (TMDB, Spotify, Google Books)
@@ -1171,6 +1184,7 @@ def get_external_details(request, source, external_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_match_recommendations(request):
     """
     Récupère des recommandations personnalisées pour le mode Global
@@ -1208,6 +1222,7 @@ def get_match_recommendations(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def submit_match_action(request):
     """
     Enregistre l'action d'un utilisateur sur une recommandation (like, dislike, add)
@@ -1311,6 +1326,7 @@ def submit_match_action(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_user_social_profile(request):
     """
     Récupère le profil social de l'utilisateur connecté
@@ -1362,6 +1378,7 @@ def get_user_social_profile(request):
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def update_user_social_profile(request):
     """
     Met à jour le profil social de l'utilisateur
@@ -1405,6 +1422,7 @@ def update_user_social_profile(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def add_friend_by_gamertag(request):
     """
     Envoie une demande d'amitié via gamertag
@@ -1487,6 +1505,7 @@ def add_friend_by_gamertag(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def search_user_by_gamertag(request, gamertag):
     """
     Recherche un utilisateur par gamertag
@@ -1520,6 +1539,7 @@ def search_user_by_gamertag(request, gamertag):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def delete_friend(request, user_id):
     """
     Supprime l'amitié entre l'utilisateur connecté et l'utilisateur cible
@@ -1546,6 +1566,7 @@ def delete_friend(request, user_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_friends_list(request):
     """
     Récupère la liste des amis de l'utilisateur
@@ -1597,6 +1618,7 @@ def get_friends_list(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_friend_requests(request):
     """
     Récupère les demandes d'amitié reçues
@@ -1644,6 +1666,7 @@ def get_friend_requests(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def respond_friend_request(request, friendship_id):
     """
     Répond à une demande d'amitié (accept/decline)
@@ -1697,6 +1720,7 @@ def respond_friend_request(request, friendship_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def create_versus_match(request):
     """
     Crée un nouveau match versus avec un ami
@@ -1759,6 +1783,7 @@ def create_versus_match(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_versus_matches(request):
     """
     Récupère les matchs versus de l'utilisateur
@@ -1818,6 +1843,7 @@ def get_versus_matches(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_versus_match_session(request, match_id):
     """
     Récupère la session actuelle d'un match versus
@@ -1880,6 +1906,7 @@ def get_versus_match_session(request, match_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def submit_versus_choice(request, match_id):
     """
     Enregistre le choix d'un utilisateur pour la session actuelle d'un match versus
@@ -1929,6 +1956,7 @@ def submit_versus_choice(request, match_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
 def get_versus_match_results(request, match_id):
     """
     Récupère les résultats complets d'un match versus terminé

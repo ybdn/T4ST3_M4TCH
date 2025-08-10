@@ -167,3 +167,4 @@ docs/
 !docs/match_action_endpoint.md
 work_notes_*.md
 backend/LOGGING_NOTES_INTERNAL.md
+issue_27_rate_limiting_notes.md
