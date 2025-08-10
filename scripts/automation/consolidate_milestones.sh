@@ -18,9 +18,9 @@ fi
 
 command -v gh >/dev/null || { echo "gh CLI manquant"; exit 2; }
 
-mapfile -t short_numbers < <(gh api repos/:owner/:repo/milestones --jq '.[] | select(.title|IN("M1","M2","M3","M4","M5","M6")) | .number')
 
-if [[ ${#short_numbers[@]} -eq 0 ]]; then
+short_numbers=$(gh api repos/:owner/:repo/milestones --jq '.[] | select(.title|IN("M1","M2","M3","M4","M5","M6")) | .number')
+if [[ -z "$short_numbers" ]]; then
   echo "Aucun milestone court trouvé. Rien à faire."; exit 0
 fi
 
