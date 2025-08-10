@@ -21,8 +21,8 @@ JWT obligatoire (`Authorization: Bearer <token>`).
 {
   "external_id": "fb_movie_001",
   "source": "tmdb",
-  "category": "FILMS",          
-  "action": "like",             
+  "category": "FILMS",
+  "action": "like",
   "title": "Inception",
   "metadata": { "popularity": 80 },
   "description": "Thriller SF"
@@ -51,11 +51,11 @@ Champs `list_id` / `list_item_id` présents uniquement si action finale == `adde
 
 ## Codes d'erreur
 
-| Code | Raison | Exemple |
-|------|--------|---------|
+| Code | Raison                           | Exemple                   |
+| ---- | -------------------------------- | ------------------------- |
 | 400  | Action invalide / champ manquant | `{ "action": "explode" }` |
-| 401  | Non authentifié | Absence header Bearer |
-| 500  | Erreur interne inattendue | Exception non prévue |
+| 401  | Non authentifié                  | Absence header Bearer     |
+| 500  | Erreur interne inattendue        | Exception non prévue      |
 
 ## Règles métier
 
