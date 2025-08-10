@@ -246,5 +246,9 @@ LOGGING = {
     },
 }
 
-if 'tastematch_api.middleware.RequestIdMiddleware' not in MIDDLEWARE:
-    MIDDLEWARE.insert(1, 'tastematch_api.middleware.RequestIdMiddleware')
+# Ensure MIDDLEWARE is defined and mutable before modifying
+if 'MIDDLEWARE' in locals() or 'MIDDLEWARE' in globals():
+    if not isinstance(MIDDLEWARE, list):
+        MIDDLEWARE = list(MIDDLEWARE)
+    if 'tastematch_api.middleware.RequestIdMiddleware' not in MIDDLEWARE:
+        MIDDLEWARE.insert(1, 'tastematch_api.middleware.RequestIdMiddleware')
