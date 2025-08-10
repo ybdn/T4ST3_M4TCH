@@ -111,19 +111,25 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
 
   // Fonction pour générer des raisons de compatibilité basées sur les métadonnées
   const getCompatibilityReasons = (item: typeof currentItem) => {
-    if (!item) return [];
-
-    const reasons = [];
-    if (item.metadata?.genre_ids?.length) {
+    if (!item) return [] as string[];
+    const meta = (item.metadata || {}) as Record<string, unknown> & {
+      genre_ids?: unknown;
+      vote_average?: unknown;
+      popularity?: unknown;
+    };
+    const reasons: string[] = [];
+    if (Array.isArray(meta.genre_ids) && meta.genre_ids.length > 0) {
       reasons.push("Genre compatible");
     }
-    if (item.metadata?.vote_average && item.metadata.vote_average > 7) {
+    const vote = typeof meta.vote_average === "number" ? meta.vote_average : undefined;
+    if (vote !== undefined && vote > 7) {
       reasons.push("Très bien noté");
     }
-    if (item.metadata?.popularity && item.metadata.popularity > 100) {
+    const popularity = typeof meta.popularity === "number" ? meta.popularity : undefined;
+    if (popularity !== undefined && popularity > 100) {
       reasons.push("Populaire");
     }
-    if (item.compatibility_score > 80) {
+    if ((item.compatibility_score ?? 0) > 80) {
       reasons.push("Forte compatibilité");
     }
 
@@ -275,7 +281,7 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
                         {/* Score de compatibilité en overlay */}
                         <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md rounded-full px-3 py-2">
                           <p className="text-2xl font-bold text-white">
-                            {Math.round(currentItem.compatibility_score)}%
+                            {Math.round(currentItem.compatibility_score ?? 0)}%
                           </p>
                           <p className="text-xs text-white/80 text-center">
                             Match

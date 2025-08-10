@@ -92,7 +92,7 @@ class CacheService {
     let validEntries = 0;
     let expiredEntries = 0;
 
-    for (const [key, item] of this.cache.entries()) {
+  for (const [, item] of this.cache.entries()) {
       if (now - item.timestamp > item.ttl) {
         expiredEntries++;
       } else {
@@ -110,9 +110,9 @@ class CacheService {
   // Nettoyage automatique des entrées expirées
   cleanup(): void {
     const now = Date.now();
-    for (const [key, item] of this.cache.entries()) {
+    for (const [k, item] of this.cache.entries()) {
       if (now - item.timestamp > item.ttl) {
-        this.cache.delete(key);
+        this.cache.delete(k);
       }
     }
   }
