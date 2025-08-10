@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 import random
 import string
+import hashlib
 
 
 class List(models.Model):
@@ -811,33 +812,8 @@ class FeatureFlag(models.Model):
         rollout = f" ({self.rollout_percentage}%)" if self.rollout_percentage < 100 and self.enabled else ""
         return f"{status} {self.name}{rollout}"
     
-    @classmethod
-    def is_enabled(cls, flag_name, user_id=None):
-        """
-        Vérifie si un feature flag est activé pour un utilisateur donné
-        Prend en compte le rollout percentage si fourni
-        """
-        try:
-            flag = cls.objects.get(name=flag_name)
-            
-            if not flag.enabled:
-                return False
-            
-            # Si rollout à 100% ou pas d'utilisateur spécifique, retourne enabled
-            if flag.rollout_percentage >= 100 or user_id is None:
-                return flag.enabled
-            
-            # Utilise un hash deterministe basé sur user_id + flag_name 
-            # pour que le même utilisateur ait toujours le même résultat
-            import hashlib
-            hash_input = f"{user_id}:{flag_name}"
-            hash_value = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
-            user_percentage = hash_value % 100
-            
-            return user_percentage < flag.rollout_percentage
-            
-        except cls.DoesNotExist:
-            return False
+    # Removed is_enabled classmethod - use FeatureFlagsService.is_enabled() instead
+    # to avoid duplication and ensure cache consistency
     
     def clean(self):
         """Validation du modèle"""

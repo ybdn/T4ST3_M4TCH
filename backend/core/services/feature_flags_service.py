@@ -2,6 +2,7 @@
 Service pour la gestion des feature flags avec cache local
 """
 import logging
+import hashlib
 from django.core.cache import cache
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -57,7 +58,6 @@ class FeatureFlagsService:
             return True
         
         # Utilise un hash déterministe pour le rollout progressif
-        import hashlib
         hash_input = f"{user_id}:{flag_name}"
         hash_value = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
         user_percentage = hash_value % 100
