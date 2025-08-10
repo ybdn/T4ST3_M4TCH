@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 import random
 import string
+import hashlib
 
 
 class List(models.Model):
@@ -762,3 +763,62 @@ class MatchSession(models.Model):
         """Vérifie si on attend le choix d'un utilisateur"""
         user_choice = self.get_user_choice(user)
         return user_choice is None and not self.is_completed
+
+
+# ========================================
+# MODÈLES SYSTÈME FEATURE FLAGS
+# ========================================
+
+class FeatureFlag(models.Model):
+    """Système de feature flags pour activer/désactiver des fonctionnalités progressivement"""
+    
+    name = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="Nom du feature flag"
+    )
+    enabled = models.BooleanField(
+        default=False,
+        verbose_name="Activé"
+    )
+    rollout_percentage = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Pourcentage de déploiement (0-100)"
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description du flag"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Date de modification"
+    )
+    
+    class Meta:
+        verbose_name = "Feature Flag"
+        verbose_name_plural = "Feature Flags"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['enabled']),
+        ]
+    
+    def __str__(self):
+        status = "✅" if self.enabled else "❌"
+        rollout = f" ({self.rollout_percentage}%)" if self.rollout_percentage < 100 and self.enabled else ""
+        return f"{status} {self.name}{rollout}"
+    
+    def clean(self):
+        """Validation du modèle"""
+        from django.core.exceptions import ValidationError
+        
+        if not (0 <= self.rollout_percentage <= 100):
+            raise ValidationError("Le pourcentage de déploiement doit être entre 0 et 100")
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
