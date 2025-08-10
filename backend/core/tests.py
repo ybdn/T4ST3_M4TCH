@@ -466,6 +466,58 @@ class FeatureFlagsServiceTestCase(APITestCase):
         self.assertIn('friend_system', feature_flags)
 
 
+class SocialProfileEndpointTestCase(APITestCase):
+    """Tests pour l'endpoint C1 /api/social/profile/me/ (et legacy /social/profile/)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='bob', password='secret')
+        obtain_url = reverse('token_obtain_pair')
+        resp = self.client.post(obtain_url, {'username': 'bob', 'password': 'secret'}, format='json')
+        token = resp.data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        # URLs
+        self.legacy_url = reverse('social_profile')
+        self.me_url = reverse('social_profile_me')
+
+    def test_profile_me_creates_profile_if_absent(self):
+        # Aucun UserProfile existant
+        self.assertFalse(UserProfile.objects.filter(user=self.user).exists())
+        r = self.client.get(self.me_url)
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
+        self.assertIn('gamertag', r.data)
+        self.assertIn('stats', r.data)
+        self.assertIn('total_matches', r.data['stats'])
+
+    def test_legacy_and_me_return_same_payload(self):
+        r1 = self.client.get(self.legacy_url)
+        r2 = self.client.get(self.me_url)
+        self.assertEqual(r1.status_code, 200)
+        self.assertEqual(r2.status_code, 200)
+        # Les structures doivent être identiques (ordre non garanti, comparer clés)
+        self.assertEqual(set(r1.data.keys()), set(r2.data.keys()))
+        self.assertEqual(set(r1.data['stats'].keys()), set(r2.data['stats'].keys()))
+
+    def test_stats_update_after_match_action(self):
+        # Appel initial pour créer le profil
+        self.client.get(self.me_url)
+        # Soumettre une action match (like)
+        action_url = reverse('submit_match_action')
+        payload = {
+            'external_id': 'prof_movie_001',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'like',
+            'title': 'Matrix'
+        }
+        act_resp = self.client.post(action_url, payload, format='json')
+        self.assertEqual(act_resp.status_code, status.HTTP_201_CREATED)
+        # Re-fetch profile
+        prof = self.client.get(self.me_url)
+        self.assertEqual(prof.data['stats']['total_matches'], 1)
+        self.assertEqual(prof.data['stats']['successful_matches'], 0)
+
+
 class RecommendationServiceTestCase(TestCase):
     """
     Tests pour le service RecommendationService

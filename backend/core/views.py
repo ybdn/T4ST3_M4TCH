@@ -1332,44 +1332,43 @@ def get_user_social_profile(request):
     Récupère le profil social de l'utilisateur connecté
     """
     try:
-        from .models import UserProfile, Friendship
-        
-        # Récupérer ou créer le profil
-        profile, created = UserProfile.objects.get_or_create(
-            user=request.user,
-            defaults={
-                'display_name': request.user.username
-            }
-        )
-        
-        # Compter les amis
-        friends_count = len(Friendship.get_friends(request.user))
-        
-        # Compter les demandes en attente
-        pending_requests = Friendship.objects.filter(
-            addressee=request.user,
-            status=Friendship.Status.PENDING
-        ).count()
-        
-        return Response({
-            'user_id': request.user.id,
-            'username': request.user.username,
-            'gamertag': profile.gamertag,
-            'display_name': profile.display_name,
-            'bio': profile.bio,
-            'avatar_url': profile.avatar_url,
-            'is_public': profile.is_public,
-            'stats': {
-                'total_matches': profile.total_matches,
-                'successful_matches': profile.successful_matches,
-                'friends_count': friends_count,
-                'pending_requests': pending_requests
-            },
-            'created_at': profile.created_at
-        })
+                from .models import UserProfile
+                from .serializers import SocialProfileSerializer
+
+                def _serialize(user):
+                    profile, _ = UserProfile.objects.get_or_create(
+                        user=user,
+                        defaults={'display_name': user.username}
+                    )
+                    return SocialProfileSerializer(profile).data
+
+                return Response(_serialize(request.user))
         
     except Exception as e:
         logger.error(f"Social profile error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération du profil: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([ScopedRateThrottle])
+def get_user_social_profile_me(request):
+    """Endpoint spécifique C1: GET /social/profile/me
+    Fournit le même payload que /social/profile/ (legacy)."""
+    try:
+        from .models import UserProfile
+        from .serializers import SocialProfileSerializer
+        profile, _ = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={'display_name': request.user.username}
+        )
+        data = SocialProfileSerializer(profile).data
+        return Response(data)
+    except Exception as e:
+        logger.error(f"Social profile /me error: {e}")
         return Response(
             {'error': f'Erreur lors de la récupération du profil: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
