@@ -7,33 +7,46 @@
     <title>T4ST3 M4TCH</title>
     
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#e11d48" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#e11d48" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e11d48" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="T4ST3 M4TCH" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="msapplication-TileColor" content="#e11d48" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
     
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
     <!-- iOS Icons -->
-    <link rel="apple-touch-icon" href="/vite.svg" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/vite.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/vite.svg" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration - Désactivé temporairement pour iOS
+    <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then(registration => {
               console.log('SW registered: ', registration);
+              
+              // Nettoyage périodique du cache
+              setInterval(() => {
+                if (registration.active) {
+                  registration.active.postMessage({ type: 'CLEAN_CACHE' });
+                }
+              }, 300000); // Toutes les 5 minutes
             })
             .catch(registrationError => {
               console.log('SW registration failed: ', registrationError);
@@ -41,6 +54,5 @@
         });
       }
     </script>
-    -->
   </body>
 </html>
