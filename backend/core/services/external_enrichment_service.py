@@ -8,6 +8,7 @@ from ..models import ListItem, ExternalReference, List as TasteList
 from .tmdb_service import TMDBService
 from .spotify_service import SpotifyService
 from .books_service import BooksService
+from .recommendation_service import RecommendationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,12 @@ class ExternalEnrichmentService:
         self.tmdb = TMDBService()
         self.spotify = SpotifyService()
         self.books = BooksService()
+        # Utiliser le nouveau service de recommandations
+        self.recommendation_service = RecommendationService(
+            tmdb_service=self.tmdb,
+            spotify_service=self.spotify,
+            books_service=self.books
+        )
     
     def search_external(self, query: str, category: str = None, limit: int = 10) -> List[Dict]:
         """Recherche enrichie dans toutes les APIs externes pertinentes"""
@@ -63,133 +70,11 @@ class ExternalEnrichmentService:
     
     def get_trending_content(self, category: str = None, limit: int = 20) -> List[Dict]:
         """Récupère le contenu tendance des APIs externes avec gestion d'erreur robuste"""
-        results = []
-        
-        # Films via TMDB
-        if not category or category == 'FILMS':
-            try:
-                trending_movies = self.tmdb.get_trending_movies(limit=limit // 2 if category else limit // 4)
-                for movie in trending_movies:
-                    movie['category'] = 'FILMS'
-                    movie['category_display'] = 'Films'
-                results.extend(trending_movies)
-            except Exception as e:
-                logger.error(f"Erreur lors de la récupération des films tendance: {e}")
-        
-        # Séries via TMDB
-        if not category or category == 'SERIES':
-            try:
-                trending_shows = self.tmdb.get_trending_tv_shows(limit=limit // 2 if category else limit // 4)
-                for show in trending_shows:
-                    show['category'] = 'SERIES'
-                    show['category_display'] = 'Séries'
-                results.extend(trending_shows)
-            except Exception as e:
-                logger.error(f"Erreur lors de la récupération des séries tendance: {e}")
-        
-        # Musique via Spotify
-        if not category or category == 'MUSIQUE':
-            try:
-                # Utiliser les nouvelles sorties et playlists en vedette
-                new_releases = self.spotify.get_new_releases(limit=limit // 3 if category else limit // 6)
-                for item in new_releases:
-                    item['category'] = 'MUSIQUE'
-                    item['category_display'] = 'Musique'
-                results.extend(new_releases)
-            except Exception as e:
-                logger.error(f"Erreur lors de la récupération des nouvelles sorties Spotify: {e}")
-            
-            try:
-                featured_playlists = self.spotify.get_featured_playlists(limit=limit // 3 if category else limit // 6)
-                for item in featured_playlists:
-                    item['category'] = 'MUSIQUE'
-                    item['category_display'] = 'Musique'
-                results.extend(featured_playlists)
-            except Exception as e:
-                logger.error(f"Erreur lors de la récupération des playlists Spotify: {e}")
-        
-        # Livres via Google Books/OpenLibrary
-        if not category or category == 'LIVRES':
-            try:
-                popular_books = self.books.get_popular_books(limit=limit // 2 if category else limit // 4)
-                for book in popular_books:
-                    book['category'] = 'LIVRES'
-                    book['category_display'] = 'Livres'
-                results.extend(popular_books)
-            except Exception as e:
-                logger.error(f"Erreur lors de la récupération des livres populaires: {e}")
-        
-        return results[:limit]
+        return self.recommendation_service.get_trending_content(category, limit)
     
     def get_similar_content(self, list_item: ListItem, limit: int = 10) -> List[Dict]:
         """Récupère du contenu similaire basé sur un élément existant"""
-        try:
-            # Vérifier s'il y a une référence externe
-            external_ref = getattr(list_item, 'external_ref', None)
-            
-            if not external_ref:
-                # Si pas de référence externe, retourner du contenu tendance de la même catégorie
-                return self.get_trending_content(list_item.list.category, limit)
-            
-            # Utiliser l'ID externe pour obtenir des recommandations
-            external_id = external_ref.external_id
-            source = external_ref.external_source
-            category = list_item.list.category
-            
-            if source == 'tmdb':
-                if category == 'FILMS':
-                    similar = self.tmdb.get_similar_movies(int(external_id), limit)
-                    recommendations = self.tmdb.get_recommendations_movies(int(external_id), limit)
-                elif category == 'SERIES':
-                    similar = self.tmdb.get_similar_tv_shows(int(external_id), limit)
-                    recommendations = self.tmdb.get_recommendations_tv_shows(int(external_id), limit)
-                else:
-                    return self.get_trending_content(category, limit)
-                
-                # Combiner et dédupliquer
-                all_results = similar + recommendations
-                seen_ids = set()
-                unique_results = []
-                
-                for item in all_results:
-                    if item['external_id'] not in seen_ids and len(unique_results) < limit:
-                        seen_ids.add(item['external_id'])
-                        item['category'] = category
-                        item['category_display'] = dict(TasteList.Category.choices)[category]
-                        unique_results.append(item)
-                
-                return unique_results
-            
-            elif source == 'spotify':
-                # Pour Spotify, utiliser les artistes similaires ou les meilleurs titres
-                if external_ref.metadata.get('type') == 'artist':
-                    similar = self.spotify.get_related_artists(external_id, limit)
-                    top_tracks = self.spotify.get_artist_top_tracks(external_id, limit=5)
-                else:
-                    # Pour les albums/titres, retourner du contenu tendance
-                    return self.get_trending_content('MUSIQUE', limit)
-                
-                results = []
-                for item in similar:
-                    item['category'] = 'MUSIQUE'
-                    item['category_display'] = 'Musique'
-                    results.append(item)
-                
-                for item in top_tracks:
-                    item['category'] = 'MUSIQUE'
-                    item['category_display'] = 'Musique'
-                    results.append(item)
-                
-                return results[:limit]
-            
-            else:
-                # Pour les livres, retourner du contenu tendance
-                return self.get_trending_content('LIVRES', limit)
-                
-        except Exception as e:
-            logger.error(f"Error getting similar content for item {list_item.id}: {e}")
-            # Fallback vers le contenu tendance
-            return self.get_trending_content(list_item.list.category, limit)
+        return self.recommendation_service.get_similar_content(list_item, limit)
     
     def enrich_list_item(self, list_item: ListItem, force_refresh: bool = False) -> bool:
         """Enrichit un élément de liste avec des métadonnées externes"""
