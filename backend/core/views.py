@@ -1214,26 +1214,24 @@ def submit_match_action(request):
     """
     try:
         from .match_services import RecommendationService
-        from .models import UserPreference, List, ListItem, ExternalReference
-        
-        external_id = request.data.get('external_id')
-        source = request.data.get('source')
-        content_type = request.data.get('content_type')
-        action = request.data.get('action')  # liked, disliked, added
-        title = request.data.get('title')
-        metadata = request.data.get('metadata', {})
-        poster_url = request.data.get('poster_url') or metadata.get('poster_url')
-        description_text = request.data.get('description') or metadata.get('description', '')
-        
-        if not all([external_id, source, content_type, action, title]):
-            return Response(
-                {'error': 'Champs requis manquants'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        from .models import List, ListItem, ExternalReference, UserPreference
+        from .serializers import MatchActionSerializer
+
+        serializer = MatchActionSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = serializer.validated_data
+
+        external_id = data['external_id']
+        source = data['source']
+        content_type = data['content_type']
+        action = data['action']  # normalisé
+        title = data['title']
+        metadata = data.get('metadata', {}) or {}
+        poster_url = data.get('poster_url') or metadata.get('poster_url')
+        description_text = data.get('description') or metadata.get('description', '')
+
         recommendation_service = RecommendationService()
-        
-        # Construire l'objet content pour le service
         content = {
             'external_id': external_id,
             'source': source,
@@ -1241,25 +1239,32 @@ def submit_match_action(request):
             'title': title,
             'metadata': metadata
         }
-        
-        # Enregistrer la préférence
-        preference = recommendation_service.mark_content_as_seen(
+
+        preference, created, changed_action, previous_action = recommendation_service.mark_content_as_seen(
             user=request.user,
             content=content,
-            action=action
+            action=action,
+            return_status=True
         )
-        
+
         response_data = {
             'success': True,
             'action': action,
-            'preference_id': preference.id
+            'preference_id': preference.id,
+            'updated': changed_action and not created
         }
-        
-        # Si l'action est 'added', ajouter à la liste appropriée
-        if action == 'added':
+
+        # Ajout à la liste si la logique métier le requiert
+        def _should_add_to_list(final_action, was_created, did_change, prev_action):
+            return (
+                final_action == UserPreference.Action.ADDED and (
+                    was_created or (did_change and prev_action != UserPreference.Action.ADDED)
+                )
+            )
+
+        if _should_add_to_list(action, created, changed_action, previous_action):
             try:
-                # Récupérer ou créer la liste pour cette catégorie
-                list_obj, created = List.objects.get_or_create(
+                list_obj, _ = List.objects.get_or_create(
                     owner=request.user,
                     category=content_type,
                     defaults={
@@ -1267,22 +1272,16 @@ def submit_match_action(request):
                         'description': List.get_default_description(content_type)
                     }
                 )
-                
-                # Obtenir la position suivante
                 max_position = ListItem.objects.filter(list=list_obj).aggregate(
                     models.Max('position')
                 )['position__max'] or 0
-                
-                # Créer l'élément de liste
                 list_item = ListItem.objects.create(
                     title=title,
                     description=description_text,
                     position=max_position + 1,
                     list=list_obj
                 )
-
-                # D'abord créer la référence externe avec les données MATCH pour préserver l'identification
-                external_ref = ExternalReference.objects.create(
+                ExternalReference.objects.create(
                     list_item=list_item,
                     external_id=external_id,
                     external_source=source,
@@ -1291,28 +1290,21 @@ def submit_match_action(request):
                     metadata=metadata,
                     rating=metadata.get('vote_average') or metadata.get('average_rating')
                 )
-                
-                # Puis tenter d'enrichir pour obtenir des données complètes
                 try:
                     enrichment_service = ExternalEnrichmentService()
                     enrichment_service.enrich_list_item(list_item, force_refresh=True)
                 except Exception as enrich_error:
                     logger.warning(f"Could not enrich item {list_item.id}: {enrich_error}")
-                    # L'ExternalReference basique existe déjà, donc l'identification MATCH est préservée
-                
                 response_data['list_item_id'] = list_item.id
                 response_data['list_id'] = list_obj.id
-                
             except Exception as add_error:
                 logger.warning(f"Could not add to list: {add_error}")
-                # Ne pas faire échouer la requête si l'ajout à la liste échoue
-        
+
         return Response(response_data, status=status.HTTP_201_CREATED)
-        
     except Exception as e:
         logger.error(f"Match action error: {e}")
         return Response(
-            {'error': f'Erreur lors de l\'enregistrement de l\'action: {str(e)}'},
+            {'error': f"Erreur lors de l'enregistrement de l'action: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

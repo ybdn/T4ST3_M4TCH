@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem, ExternalReference
+from .models import List, ListItem, ExternalReference, UserPreference
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -132,3 +132,52 @@ class ListSerializer(serializers.ModelSerializer):
             validated_data['description'] = List.get_default_description(validated_data['category'])
         
         return super().create(validated_data)
+
+
+class MatchActionSerializer(serializers.Serializer):
+    """Serializer pour valider une action utilisateur sur une recommandation.
+    Accepte des alias front: category -> content_type, like->liked, dislike->disliked, add->added.
+    """
+    external_id = serializers.CharField(max_length=100)
+    source = serializers.ChoiceField(choices=UserPreference.Source.choices)
+    # Le front envoie "category"; on accepte aussi content_type.
+    content_type = serializers.ChoiceField(choices=UserPreference.ContentType.choices, required=False)
+    category = serializers.ChoiceField(choices=UserPreference.ContentType.choices, required=False)
+    action = serializers.CharField(max_length=20)
+    title = serializers.CharField(max_length=200)
+    metadata = serializers.JSONField(required=False, default=dict)
+    description = serializers.CharField(required=False, allow_blank=True)
+    poster_url = serializers.CharField(required=False, allow_blank=True)
+
+    ACTION_ALIASES = {
+        'like': UserPreference.Action.LIKED,
+        'liked': UserPreference.Action.LIKED,
+        'dislike': UserPreference.Action.DISLIKED,
+        'disliked': UserPreference.Action.DISLIKED,
+        'add': UserPreference.Action.ADDED,
+        'added': UserPreference.Action.ADDED,
+        'skip': UserPreference.Action.SKIPPED,
+        'skipped': UserPreference.Action.SKIPPED,
+    }
+
+    def validate(self, attrs):
+        # Harmoniser content_type à partir de category si fourni
+        content_type = attrs.get('content_type') or attrs.get('category')
+        if not content_type:
+            raise serializers.ValidationError({'content_type': 'Champ requis (alias category accepté).'})
+        attrs['content_type'] = content_type
+        attrs.pop('category', None)
+
+        # Normaliser action
+        raw_action = attrs.get('action')
+        normalized = self.ACTION_ALIASES.get(raw_action)
+        if not normalized:
+            raise serializers.ValidationError({'action': f"Action inconnue: {raw_action}"})
+        attrs['action'] = normalized
+        return attrs
+
+    def to_internal_value(self, data):
+        # Laisser Serializer faire le gros du travail
+        return super().to_internal_value(data)
+
+    # Pas de create/update: ce serializer est strictement pour validation d'entrée.

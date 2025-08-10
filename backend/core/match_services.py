@@ -8,7 +8,7 @@ import random
 import time
 import logging
 import hashlib
-from typing import List as TypingList, Dict, Optional
+from typing import List as TypingList, Dict, Any, Optional
 from django.contrib.auth.models import User
 from django.db.models import Q, Count, Avg
 from django.conf import settings
@@ -372,23 +372,66 @@ class RecommendationService:
         base_score += random.uniform(-10, 10)
         return max(0, min(100, base_score))
     
-    def mark_content_as_seen(self, user: User, content: Dict, action: str) -> UserPreference:
-        preference, _ = UserPreference.objects.update_or_create(
-            user=user,
-            external_id=content['external_id'],
-            source=content['source'],
-            defaults={
-                'content_type': content['content_type'],
-                'action': action,
-                'title': content['title'],
-                'metadata': content.get('metadata', {})
-            }
-        )
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.total_matches += 1
-        if action == 'added':
+    def _apply_profile_stats(self, profile: 'UserProfile', action: str, created: bool, changed_action: bool, previous_action: Optional[str]):
+        """Met à jour les statistiques du profil utilisateur de manière idempotente.
+        Règles:
+        - total_matches augmente uniquement lors de la première création de préférence.
+        - successful_matches augmente si on passe à ADDED (création avec ADDED ou transition depuis une action différente de ADDED).
+        """
+        if created:
+            profile.total_matches += 1
+        if action == UserPreference.Action.ADDED and (created or (changed_action and previous_action != UserPreference.Action.ADDED)):
             profile.successful_matches += 1
         profile.save()
+
+    def mark_content_as_seen(self, user: User, content: Dict, action: str, return_status: bool = False):
+        """Upsert d'une UserPreference avec logique idempotente.
+        Retourne par défaut l'objet preference. Si return_status=True, retourne
+        (preference, created, changed_action, previous_action).
+        """
+        created = False
+        changed_action = False
+        prefs_qs = UserPreference.objects.filter(
+            user=user,
+            external_id=content['external_id'],
+            source=content['source']
+        )
+        preference = prefs_qs.first()
+        previous_action = None
+        if preference is None:
+            preference = UserPreference.objects.create(
+                user=user,
+                external_id=content['external_id'],
+                source=content['source'],
+                content_type=content['content_type'],
+                action=action,
+                title=content['title'],
+                metadata=content.get('metadata', {})
+            )
+            created = True
+            # changed_action = True car il n'y avait pas d'action préalable
+            changed_action = True  # création initiale
+        else:
+            previous_action = preference.action
+            # Mettre à jour uniquement si quelque chose change
+            if (preference.action != action or
+                preference.content_type != content['content_type'] or
+                preference.title != content['title'] or
+                preference.metadata != content.get('metadata', {})):
+                if preference.action != action:
+                    changed_action = True
+                preference.content_type = content['content_type']
+                preference.action = action
+                preference.title = content['title']
+                preference.metadata = content.get('metadata', {})
+                preference.save()
+
+        # Gestion stats profil via helper idempotent
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        self._apply_profile_stats(profile, action, created, changed_action, previous_action)
+
+        if return_status:
+            return preference, created, changed_action, previous_action
         return preference
 
 

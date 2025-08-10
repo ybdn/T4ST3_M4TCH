@@ -5,6 +5,147 @@ from django.urls import reverse
 from django.conf import settings
 from unittest.mock import patch
 import os
+from django.contrib.auth.models import User
+from .models import UserProfile
+
+
+class MatchActionEndpointTestCase(APITestCase):
+    """Tests pour l'endpoint POST /api/v1/match/action/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='alice', password='secret')
+        # Obtenir un token JWT
+        obtain_url = reverse('token_obtain_pair')
+        resp = self.client.post(obtain_url, {'username': 'alice', 'password': 'secret'}, format='json')
+        if resp.status_code == 200 and 'access' in resp.data:
+            token = resp.data['access']
+            self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        self.url = reverse('submit_match_action')
+
+    def test_submit_like_action_success(self):
+        payload = {
+            'external_id': 'fb_movie_001',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'like',
+            'title': 'Inception',
+            'metadata': {'popularity': 80}
+        }
+        resp = self.client.post(self.url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(resp.data.get('success'))
+        self.assertEqual(resp.data.get('action'), 'liked')
+        self.assertIn('preference_id', resp.data)
+
+    def test_idempotent_same_action(self):
+        payload = {
+            'external_id': 'fb_movie_002',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'like',
+            'title': 'Interstellar'
+        }
+        first = self.client.post(self.url, payload, format='json')
+        second = self.client.post(self.url, payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(first.data['preference_id'], second.data['preference_id'])
+        self.assertFalse(second.data.get('updated'))  # pas de changement d'action
+
+    def test_update_action_changes_flag(self):
+        base = {
+            'external_id': 'fb_movie_003',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'title': 'The Dark Knight'
+        }
+        like = {**base, 'action': 'like'}
+        add = {**base, 'action': 'add'}
+        first = self.client.post(self.url, like, format='json')
+        second = self.client.post(self.url, add, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(first.data['preference_id'], second.data['preference_id'])
+        self.assertTrue(second.data.get('updated'))
+        self.assertEqual(second.data.get('action'), 'added')
+
+    def test_added_action_idempotent(self):
+        payload = {
+            'external_id': 'fb_movie_005',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'add',
+            'title': 'La La Land'
+        }
+        first = self.client.post(self.url, payload, format='json')
+        second = self.client.post(self.url, payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(first.data['preference_id'], second.data['preference_id'])
+        # second ne devrait pas être marqué updated (même action)
+        self.assertFalse(second.data.get('updated'))
+
+    def test_invalid_action_returns_400(self):
+        payload = {
+            'external_id': 'fb_movie_004',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'explode',
+            'title': 'Parasite'
+        }
+        resp = self.client.post(self.url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('action', resp.data)
+
+    def test_stats_total_matches_idempotent(self):
+        """total_matches ne doit s'incrémenter qu'à la première interaction d'un contenu."""
+        payload = {
+            'external_id': 'stats_movie_001',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'like',
+            'title': 'Blade Runner'
+        }
+        first = self.client.post(self.url, payload, format='json')
+        second = self.client.post(self.url, payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.total_matches, 1)
+        self.assertEqual(profile.successful_matches, 0)
+
+    def test_stats_successful_matches_only_on_added_transition(self):
+        """successful_matches augmente uniquement lors d'un passage à 'added'."""
+        base = {
+            'external_id': 'stats_movie_002',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'title': 'Arrival'
+        }
+        like = {**base, 'action': 'like'}
+        add = {**base, 'action': 'add'}
+        self.client.post(self.url, like, format='json')
+        self.client.post(self.url, add, format='json')
+        # Rejouer add pour vérifier idempotence sur successful_matches
+        self.client.post(self.url, add, format='json')
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.total_matches, 1)  # une seule préférence pour ce contenu
+        self.assertEqual(profile.successful_matches, 1)  # incrément uniquement lors transition vers added
+
+    def test_stats_successful_matches_add_idempotent(self):
+        """Deux actions 'add' successives sur le même contenu n'incrémentent qu'une fois successful_matches."""
+        payload = {
+            'external_id': 'stats_movie_003',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'add',
+            'title': 'Dune'
+        }
+        self.client.post(self.url, payload, format='json')
+        self.client.post(self.url, payload, format='json')
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.total_matches, 1)
+        self.assertEqual(profile.successful_matches, 1)
 
 
 class ConfigEndpointTestCase(APITestCase):

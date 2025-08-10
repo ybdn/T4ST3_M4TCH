@@ -45,7 +45,7 @@ La conception s'adresse à plusieurs types d'utilisateurs :
 - **Recherche et ajout externe** : Intégration avec TMDB (films/séries), Spotify (musique) et Google Books (livres)
 - **Interface utilisateur moderne** : Design responsive avec Material-UI et Tailwind CSS
 
-### 📱 Pages et Navigation  
+### 📱 Pages et Navigation
 
 - **Page Accueil** : Vue d'ensemble des activités récentes
 - **Page Découvrir** : Exploration de contenus tendance avec suggestions personnalisées
@@ -75,26 +75,73 @@ La conception s'adresse à plusieurs types d'utilisateurs :
 - **Listes collaboratives** : Création de listes à plusieurs
 - **Système de badges et succès** : Gamification de l'engagement
 
+### 🧩 Endpoint Match Action (B2)
+
+Un nouvel endpoint permet maintenant d'enregistrer les actions utilisateur sur les recommandations afin d'alimenter les préférences et futures mécaniques de compatibilité.
+
+| Méthode | URL                  | Auth | Description                                                              |
+| ------- | -------------------- | ---- | ------------------------------------------------------------------------ |
+| POST    | `/api/match/action/` | JWT  | Enregistre / met à jour une action utilisateur sur un contenu recommandé |
+
+#### Payload accepté (alias front inclus)
+
+```json
+{
+  "external_id": "fb_movie_001",
+  "source": "tmdb",
+  "category": "FILMS", // alias accepté pour content_type
+  // ou "content_type": "FILMS",
+  "action": "like", // alias normalisé -> liked
+  // valeurs acceptées (alias -> interne): like→liked, dislike→disliked, add→added, skip→skipped
+  "title": "Inception",
+  "metadata": { "popularity": 80 },
+  "description": "Thriller SF" // optionnel (fusionné avec metadata.description)
+}
+```
+
+#### Réponse (201)
+
+```json
+{
+  "success": true,
+  "action": "liked",
+  "preference_id": 123,
+  "updated": false, // true si changement d'action (ex: liked -> added)
+  "list_id": 5, // présents uniquement si action == added et création list item
+  "list_item_id": 42
+}
+```
+
+#### Règles clés
+
+- Idempotence stricte: même action répétée => même `preference_id`, `updated=false`.
+- `updated=true` uniquement si l'action change (ex: liked -> added).
+- Passage vers `added` (création directe ou transition) insère un list item; répéter `added` n'insère rien.
+- Stats profil: `total_matches` incrémenté seulement à la première interaction sur un contenu; `successful_matches` uniquement lors d'un passage vers `added`.
+- Validation stricte: action inconnue => HTTP 400.
+
+Voir aussi `docs/match_action_endpoint.md` pour plus de détails (scénarios, statuts, idempotence étendue).
+
 ## Stack technologique
 
 La stack est choisie pour une architecture découplée, moderne et scalable, prête pour une application web interactive.
 
-| Composant              | Technologie                        | Justification                                                                                                 |
-| :--------------------- | :--------------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| **Framework Backend**  | **Django + Django REST Framework** | Fournit une API REST robuste et sécurisée. DRF est le standard pour construire des API avec Django.           |
+| Composant              | Technologie                        | Justification                                                                                                       |
+| :--------------------- | :--------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| **Framework Backend**  | **Django + Django REST Framework** | Fournit une API REST robuste et sécurisée. DRF est le standard pour construire des API avec Django.                 |
 | **Framework Frontend** | **React**                          | Crée une interface utilisateur riche, rapide et moderne (Single-Page Application), totalement découplée du backend. |
-| **Base de Données**    | **PostgreSQL**                     | Indispensable pour une application sociale, gère une forte concurrence et assure la parité dev/prod.          |
-| **Mise en Cache**      | **Redis**                          | Essentiel pour améliorer les performances et respecter les limites de débit des APIs externes.                |
-| **File de Tâches**     | **Celery**                         | Permet d'exécuter des tâches longues en arrière-plan pour une expérience utilisateur fluide.                  |
-| **Déploiement**        | **Docker + Nginx**                 | Docker conteneurise l'environnement. Nginx sert le frontend React et agit comme reverse proxy pour l'API.     |
+| **Base de Données**    | **PostgreSQL**                     | Indispensable pour une application sociale, gère une forte concurrence et assure la parité dev/prod.                |
+| **Mise en Cache**      | **Redis**                          | Essentiel pour améliorer les performances et respecter les limites de débit des APIs externes.                      |
+| **File de Tâches**     | **Celery**                         | Permet d'exécuter des tâches longues en arrière-plan pour une expérience utilisateur fluide.                        |
+| **Déploiement**        | **Docker + Nginx**                 | Docker conteneurise l'environnement. Nginx sert le frontend React et agit comme reverse proxy pour l'API.           |
 
 ### 🔗 APIs Externes Intégrées
 
-| Service              | Utilisation                     | Fonctionnalités                    |
-| :------------------- | :------------------------------ | :--------------------------------- |
-| **TMDB API**         | Films et séries                 | Recherche, métadonnées, images, tendances |
-| **Spotify Web API**  | Musique et albums              | Recherche d'albums, métadonnées artistiques |
-| **Google Books API** | Livres et littérature          | Recherche, couvertures, informations éditeur |
+| Service              | Utilisation           | Fonctionnalités                              |
+| :------------------- | :-------------------- | :------------------------------------------- |
+| **TMDB API**         | Films et séries       | Recherche, métadonnées, images, tendances    |
+| **Spotify Web API**  | Musique et albums     | Recherche d'albums, métadonnées artistiques  |
+| **Google Books API** | Livres et littérature | Recherche, couvertures, informations éditeur |
 
 ### 🚀 État Technique Actuel
 
@@ -148,21 +195,23 @@ Le projet est divisé en trois services principaux sur Render :
 Pour rendre l'application accessible via un nom de domaine personnalisé (ex: `t4st3m4tch.ybdn.fr`), voici les étapes clés :
 
 1. **Côté Render (Service Frontend)** :
-    - Dans les paramètres du service frontend, allez dans la section **"Custom Domains"**.
-    - Ajoutez votre nom de domaine complet (ex: `t4st3m4tch.ybdn.fr`).
-    - Render vous fournira une URL cible se terminant par `.onrender.com`.
+
+   - Dans les paramètres du service frontend, allez dans la section **"Custom Domains"**.
+   - Ajoutez votre nom de domaine complet (ex: `t4st3m4tch.ybdn.fr`).
+   - Render vous fournira une URL cible se terminant par `.onrender.com`.
 
 2. **Côté Fournisseur DNS (ex: OVH, Gandi, GoDaddy)** :
-    - Accédez à la gestion de la zone DNS de votre nom de domaine.
-    - Créez un nouvel enregistrement de type **`CNAME`**.
-    - Configurez cet enregistrement pour faire pointer votre sous-domaine (ex: `t4st3m4tch`) vers l'URL cible fournie par Render à l'étape précédente.
+
+   - Accédez à la gestion de la zone DNS de votre nom de domaine.
+   - Créez un nouvel enregistrement de type **`CNAME`**.
+   - Configurez cet enregistrement pour faire pointer votre sous-domaine (ex: `t4st3m4tch`) vers l'URL cible fournie par Render à l'étape précédente.
 
 3. **Côté Render (Service Backend) - Crucial pour CORS** :
-    - Le frontend (servi depuis votre nouveau domaine) et le backend (servi depuis une URL `.onrender.com`) n'ont pas la même "origine". Pour autoriser la communication entre eux, il est impératif de mettre à jour la configuration CORS du backend.
-    - Dans les paramètres du service backend sur Render, allez dans la section **"Environment"**.
-    - Ajoutez ou modifiez la variable d'environnement `CORS_ALLOWED_ORIGINS`.
-    - Assurez-vous que cette variable contienne l'URL de votre frontend, préfixée par `https://` (ex: `https://t4st3m4tch.ybdn.fr`). Si plusieurs domaines sont nécessaires, séparez-les par une virgule.
-    - Exemple de valeur : `https://tastematch-app.onrender.com,https://t4st3m4tch.ybdn.fr`
+   - Le frontend (servi depuis votre nouveau domaine) et le backend (servi depuis une URL `.onrender.com`) n'ont pas la même "origine". Pour autoriser la communication entre eux, il est impératif de mettre à jour la configuration CORS du backend.
+   - Dans les paramètres du service backend sur Render, allez dans la section **"Environment"**.
+   - Ajoutez ou modifiez la variable d'environnement `CORS_ALLOWED_ORIGINS`.
+   - Assurez-vous que cette variable contienne l'URL de votre frontend, préfixée par `https://` (ex: `https://t4st3m4tch.ybdn.fr`). Si plusieurs domaines sont nécessaires, séparez-les par une virgule.
+   - Exemple de valeur : `https://tastematch-app.onrender.com,https://t4st3m4tch.ybdn.fr`
 
 Après avoir sauvegardé les variables d'environnement, Render redéploiera automatiquement le service backend avec la nouvelle configuration, résolvant ainsi les erreurs CORS.
 
