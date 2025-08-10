@@ -21,7 +21,7 @@ from tastematch_api.middleware import RequestIdFilter, SamplingFilter  # type: i
 try:
     from pythonjsonlogger import jsonlogger  # type: ignore
     HAVE_JSON_LOGGER = True
-except Exception:  # pragma: no cover - robust fallback
+except ImportError:  # pragma: no cover - robust fallback
     HAVE_JSON_LOGGER = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
