@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 # Consolidation des milestones courtes (M1..M6) vers les milestones descriptives déjà existantes.
 # Mapping:
 #   M1  -> M1 - Core Match Alpha
