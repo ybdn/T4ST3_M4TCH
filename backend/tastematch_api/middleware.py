@@ -52,6 +52,15 @@ class SamplingFilter:
     """Filtre les logs DEBUG selon LOG_SAMPLING_RATE (variable settings)."""
 
     def filter(self, record):  # noqa: D401
+        """
+        Determines whether a log record should be processed based on the sampling rate.
+
+        If LOG_SAMPLING_RATE (from settings) is 1 or higher, all records are allowed.
+        If less than 1, DEBUG-level records are sampled according to the rate; higher-level records are always allowed.
+
+        Returns:
+            bool: True if the record should be processed, False otherwise.
+        """
         rate = getattr(settings, 'LOG_SAMPLING_RATE', 1)
         if rate >= 1:
             return True
