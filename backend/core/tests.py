@@ -19,7 +19,7 @@ class MatchActionEndpointTestCase(APITestCase):
         if resp.status_code == 200 and 'access' in resp.data:
             token = resp.data['access']
             self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        self.url = '/api/match/action/'  # endpoint défini dans core.urls (non versionné)
+        self.url = reverse('submit_match_action')
 
     def test_submit_like_action_success(self):
         payload = {
@@ -67,6 +67,22 @@ class MatchActionEndpointTestCase(APITestCase):
         self.assertEqual(first.data['preference_id'], second.data['preference_id'])
         self.assertTrue(second.data.get('updated'))
         self.assertEqual(second.data.get('action'), 'added')
+
+    def test_added_action_idempotent(self):
+        payload = {
+            'external_id': 'fb_movie_005',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'add',
+            'title': 'La La Land'
+        }
+        first = self.client.post(self.url, payload, format='json')
+        second = self.client.post(self.url, payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(first.data['preference_id'], second.data['preference_id'])
+        # second ne devrait pas être marqué updated (même action)
+        self.assertFalse(second.data.get('updated'))
 
     def test_invalid_action_returns_400(self):
         payload = {

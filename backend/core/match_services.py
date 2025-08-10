@@ -372,23 +372,58 @@ class RecommendationService:
         base_score += random.uniform(-10, 10)
         return max(0, min(100, base_score))
     
-    def mark_content_as_seen(self, user: User, content: Dict, action: str) -> UserPreference:
-        preference, _ = UserPreference.objects.update_or_create(
+    def mark_content_as_seen(self, user: User, content: Dict, action: str, return_status: bool = False):
+        """Upsert d'une UserPreference avec logique idempotente sur les statistiques.
+        Retourne par défaut l'objet preference. Si return_status=True, retourne
+        (preference, created, changed_action).
+        """
+        created = False
+        changed_action = False
+        prefs_qs = UserPreference.objects.filter(
             user=user,
             external_id=content['external_id'],
-            source=content['source'],
-            defaults={
-                'content_type': content['content_type'],
-                'action': action,
-                'title': content['title'],
-                'metadata': content.get('metadata', {})
-            }
+            source=content['source']
         )
+        preference = prefs_qs.first()
+        previous_action = None
+        if preference is None:
+            preference = UserPreference.objects.create(
+                user=user,
+                external_id=content['external_id'],
+                source=content['source'],
+                content_type=content['content_type'],
+                action=action,
+                title=content['title'],
+                metadata=content.get('metadata', {})
+            )
+            created = True
+            changed_action = True  # première action
+        else:
+            previous_action = preference.action
+            # Mettre à jour uniquement si quelque chose change
+            if (preference.action != action or
+                preference.content_type != content['content_type'] or
+                preference.title != content['title'] or
+                preference.metadata != content.get('metadata', {})):
+                if preference.action != action:
+                    changed_action = True
+                preference.content_type = content['content_type']
+                preference.action = action
+                preference.title = content['title']
+                preference.metadata = content.get('metadata', {})
+                preference.save()
+
+        # Gestion stats profil (idempotent)
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.total_matches += 1
-        if action == 'added':
+        if created:
+            profile.total_matches += 1  # première interaction sur ce contenu
+        # successful_matches uniquement si on passe à added (création ou changement)
+        if action == UserPreference.Action.ADDED and (created or (changed_action and previous_action != UserPreference.Action.ADDED)):
             profile.successful_matches += 1
         profile.save()
+
+        if return_status:
+            return preference, created, changed_action
         return preference
 
 

@@ -1240,28 +1240,22 @@ def submit_match_action(request):
             'metadata': metadata
         }
 
-        # Upsert + idempotence : si même action déjà enregistrée on ne double compte pas
-        existing_pref = UserPreference.objects.filter(
-            user=request.user,
-            external_id=external_id,
-            source=source
-        ).first()
-
-        preference = recommendation_service.mark_content_as_seen(
+        preference, created, changed_action = recommendation_service.mark_content_as_seen(
             user=request.user,
             content=content,
-            action=action
+            action=action,
+            return_status=True
         )
 
         response_data = {
             'success': True,
             'action': action,
             'preference_id': preference.id,
-            'updated': existing_pref is not None and existing_pref.action != action
+            'updated': changed_action and not created
         }
 
-        # Ajout à la liste si action added et si (nouvelle préférence ou changement vers added)
-        if action == UserPreference.Action.ADDED and (existing_pref is None or existing_pref.action != action):
+        # Ajout à la liste si action added (création ou changement vers added seulement)
+        if action == UserPreference.Action.ADDED and (created or changed_action):
             try:
                 list_obj, _ = List.objects.get_or_create(
                     owner=request.user,
