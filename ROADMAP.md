@@ -21,15 +21,26 @@ Hors scope : temps réel, matchmaking avancé, gamification complexe, analytics 
 
 ## Milestones Résumées
 
-| Code | Milestone | Objectif clé |
-|------|-----------|--------------|
-| M0 | Baseline Stable | Stubs & build propre (ACQUIS) |
-| M1 | Core Match Alpha | Recos + actions réelles |
-| M2 | Social v1 | Profil + amis basiques |
-| M3 | Versus v1 | Boucle de jeu simple |
-| M4 | Qualité/Obs | Tests, logs, métriques |
-| M5 | Bêta Fermée | 10–50 users réels |
-| M6 | Bêta Élargie | Performance & polish |
+| Code | Milestone        | Objectif clé                  |
+| ---- | ---------------- | ----------------------------- |
+| M0   | Baseline Stable  | Stubs & build propre (ACQUIS) |
+| M1   | Core Match Alpha | Recos + actions réelles       |
+| M2   | Social v1        | Profil + amis basiques        |
+| M3   | Versus v1        | Boucle de jeu simple          |
+| M4   | Qualité/Obs      | Tests, logs, métriques        |
+| M5   | Bêta Fermée      | 10–50 users réels             |
+| M6   | Bêta Élargie     | Performance & polish          |
+
+### Vue compacte par Milestone
+
+Format: Codes d'issues (lettres = epics, chiffres = identifiants internes). Les parenthèses indiquent un item optionnel / différable.
+
+- M1 – Core Match Alpha: A1 A3 B1 B2 B4 B5 F1 G1
+- M2 – Social v1: C1 C3 D1 D2 D4 (D3) B3
+- M3 – Versus v1: E2 E4 E5 E6 E7 H1 H2
+- M4 – Qualité / Observabilité: F2 F3 F4 F5 F6 G2 G3 I1 I3 J2 J4
+- M5 – Préparation Bêta Fermée: K2 K1 K3 H3 I2 G4 (retards) K4
+- M6 – Post‑bêta (évolutif): Optim & polish post‑bêta (non figé)
 
 ## Principes d'Architecture
 
@@ -58,7 +69,7 @@ Hors scope : temps réel, matchmaking avancé, gamification complexe, analytics 
 Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 
 ---
- 
+
 ### 1. [A1] Endpoint de configuration `/api/v1/config`
 
 **Contexte**: Le frontend a besoin de connaître les feature flags et infos build sans rebuild.
@@ -70,17 +81,17 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Inclure un hash de commit (env GIT_SHA) si disponible
 - [ ] Ajouter cache headers (ETag ou max-age faible 60s)
 - [ ] Test API (statut 200 + structure)
-**Critères d'acceptation**:
+      **Critères d'acceptation**:
 - [ ] Appel renvoie 200 <50ms p95 (local)
 - [ ] Clés absentes → valeurs par défaut
 - [ ] Pas d'info sensible exposée
-**Tests**: APITestCase structure; test absence de flags.
-**Risques**: Minimiser fuite d'env. Mitigation: whitelist champs.
-**Labels**: backend,infra,feature-flags,priority:high,size:S
-**Dépendances**: Aucune
+      **Tests**: APITestCase structure; test absence de flags.
+      **Risques**: Minimiser fuite d'env. Mitigation: whitelist champs.
+      **Labels**: backend,infra,feature-flags,priority:high,size:S
+      **Dépendances**: Aucune
 
 ---
- 
+
 ### 2. [A3] Système de Feature Flags backend
 
 **Contexte**: Les features Match / Social / Versus doivent être activables progressivement.
@@ -93,16 +104,16 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Cache local (invalidation post-save signal)
 - [ ] Intégrer dans endpoint config (A1)
 - [ ] Tests unitaires service
-**Critères**:
+      **Critères**:
 - [ ] Désactiver flag coupe code path (ex: /social endpoints 404 ou 403)
 - [ ] Lecture O(1) (pas de requête par appel)
-**Tests**: création, toggle, cache invalidation.
-**Risques**: Oubli gating; ajouter check liste PR.
-**Labels**: backend,feature-flags,priority:high,size:M
-**Dépendances**: A1
+      **Tests**: création, toggle, cache invalidation.
+      **Risques**: Oubli gating; ajouter check liste PR.
+      **Labels**: backend,feature-flags,priority:high,size:M
+      **Dépendances**: A1
 
 ---
- 
+
 ### 3. [C1] Endpoint profil social (GET `/social/profile/me`)
 
 **Contexte**: Front affiche actuellement stub.
@@ -113,14 +124,14 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Stats (total_matches, successful_matches, friends_count, pending_requests)
 - [ ] Vue DRF avec permission IsAuthenticated
 - [ ] Test API (profil existant / création auto)
-**Critères**:
+      **Critères**:
 - [ ] Création automatique profil si manquant
 - [ ] Temps <80ms (local) p95
-**Labels**: backend,social,priority:high,size:S
-**Dépendances**: A1, A3
+      **Labels**: backend,social,priority:high,size:S
+      **Dépendances**: A1, A3
 
 ---
- 
+
 ### 4. [C3] Hook frontend `useSocialProfile` réel
 
 **Contexte**: Hook stub renvoie toujours null.
@@ -131,14 +142,14 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Bouton reload (optionnel) / invalidation
 - [ ] Gestion 401 → redirection login
 - [ ] Tests manuels (affichage profil)
-**Critères**:
+      **Critères**:
 - [ ] Profil s'affiche sans erreur
 - [ ] Fallback spinner & message d'erreur
-**Labels**: frontend,social,priority:high,size:S
-**Dépendances**: C1
+      **Labels**: frontend,social,priority:high,size:S
+      **Dépendances**: C1
 
 ---
- 
+
 ### 5. [B1] Implémentation RecommendationService (phase 1)
 
 **Contexte**: Code actuel mélange simulation & placeholders.
@@ -150,14 +161,14 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Ajout TTL cache API externe (APICache)
 - [ ] Log timing par catégorie
 - [ ] Test unitaire par méthode (retourne liste non vide ou [])
-**Critères**:
+      **Critères**:
 - [ ] Aucune duplication d'external_id dans réponse
 - [ ] Scoring compatibilité ≥ présent (placeholder accepté)
-**Labels**: backend,reco,priority:high,size:M
-**Dépendances**: A3
+      **Labels**: backend,reco,priority:high,size:M
+      **Dépendances**: A3
 
 ---
- 
+
 ### 6. [B2] Endpoint action match (POST `/match/action/`)
 
 **Contexte**: Front a besoin de persister like/dislike/add.
@@ -169,14 +180,14 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Incrément stats (total_matches, successful si added)
 - [ ] Réponse `{success, preference_id, action}`
 - [ ] Test API (idempotence même action)
-**Critères**:
+      **Critères**:
 - [ ] Conflits gérés sans 500
 - [ ] Action hors enum → 400
-**Labels**: backend,match,priority:high,size:S
-**Dépendances**: B1
+      **Labels**: backend,match,priority:high,size:S
+      **Dépendances**: B1
 
 ---
- 
+
 ### 7. [B5] Remplacer stub `useMatchRecommendations`
 
 **Contexte**: Hook actuel renvoie listes vides.
@@ -187,14 +198,14 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Méthode `submitAction(reco, action)` → POST B2 puis retire item
 - [ ] Gestion erreurs (retry bouton)
 - [ ] Petits tests unitaires (mocks) ou storybook interactif (optionnel)
-**Critères**:
+      **Critères**:
 - [ ] Like/Dislike/Add retirent l'item de l'UI
 - [ ] Aucun crash si réponse lente
-**Labels**: frontend,match,priority:high,size:M
-**Dépendances**: B1, B2
+      **Labels**: frontend,match,priority:high,size:M
+      **Dépendances**: B1, B2
 
 ---
- 
+
 ### 8. [D1] Endpoint ajout ami (POST `/social/friends/add`)
 
 **Contexte**: Ajout impossible actuellement.
@@ -206,13 +217,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Rate limit basique (throttle class DRF)
 - [ ] Réponse `{success, friendship_id, status}`
 - [ ] Test API (doublon -> 400)
-**Critères**:
+      **Critères**:
 - [ ] Pas d'auto‑ajout soi‑même
-**Labels**: backend,social,priority:high,size:M
-**Dépendances**: C1
+      **Labels**: backend,social,priority:high,size:M
+      **Dépendances**: C1
 
 ---
- 
+
 ### 9. [D2] Endpoint liste amis (GET `/social/friends/`)
 
 **Contexte**: Interface a besoin d'une liste des ACCEPTED.
@@ -222,13 +233,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Query friendships où user impliqué & status=accepted
 - [ ] Mapper FriendUser (côté autre)
 - [ ] Test API (cas 0 amis)
-**Critères**:
+      **Critères**:
 - [ ] Performant <50ms local (utiliser select_related)
-**Labels**: backend,social,size:S,priority:high
-**Dépendances**: D1
+      **Labels**: backend,social,size:S,priority:high
+      **Dépendances**: D1
 
 ---
- 
+
 ### 10. [D4] Implémenter UI liste & ajout amis (FriendsManager)
 
 **Contexte**: Composant partiellement stub.
@@ -239,13 +250,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Hook `useFriendSearch` → POST add + retour état
 - [ ] Affichage pending count (si future D5) placeholder
 - [ ] Toast succès / erreur
-**Critères**:
+      **Critères**:
 - [ ] Ajout ami valide → apparaît après refresh auto
-**Labels**: frontend,social,size:M,priority:high
-**Dépendances**: D2
+      **Labels**: frontend,social,size:M,priority:high
+      **Dépendances**: D2
 
 ---
- 
+
 ### 11. [E2] Création match Versus (POST `/versus/matches`)
 
 **Contexte**: Service côté modèle présent mais pas exposé.
@@ -257,13 +268,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Génération contenu (RecommendationService catégorisé)
 - [ ] Réponse minimal `{match_id, total_rounds}`
 - [ ] Test API (non amis -> 400)
-**Critères**:
+      **Critères**:
 - [ ] Création unique si aucun match actif identique (optionnel warning)
-**Labels**: backend,versus,size:M,priority:high
-**Dépendances**: D2, B1
+      **Labels**: backend,versus,size:M,priority:high
+      **Dépendances**: D2, B1
 
 ---
- 
+
 ### 12. [E4] Soumettre choix Versus (POST `/versus/matches/{id}/choice`)
 
 **Contexte**: Progression match dépend des choix.
@@ -274,13 +285,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Détection match (liked/liked)
 - [ ] Mise à jour score + passage round suivant
 - [ ] Réponse avec état session/match
-**Critères**:
+      **Critères**:
 - [ ] Double soumission même round -> 400
-**Labels**: backend,versus,size:M,priority:high
-**Dépendances**: E2
+      **Labels**: backend,versus,size:M,priority:high
+      **Dépendances**: E2
 
 ---
- 
+
 ### 13. [E6] Interface VersusMatch (remplacer stub)
 
 **Contexte**: UI actuelle montre un placeholder.
@@ -291,13 +302,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Action submitChoice (E4)
 - [ ] Affichage animation match réussi
 - [ ] Fin de match: résumé + CTA rejouer
-**Critères**:
+      **Critères**:
 - [ ] Aucune action possible quand session complétée
-**Labels**: frontend,versus,size:L,priority:high
-**Dépendances**: E4
+      **Labels**: frontend,versus,size:L,priority:high
+      **Dépendances**: E4
 
 ---
- 
+
 ### 14. [F1] Logging structuré (backend)
 
 **Contexte**: Besoin de corrélation & debug production.
@@ -309,13 +320,13 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Log entrée/sortie key fields (path, status, duration ms)
 - [ ] Logger service reco timings
 - [ ] Tests unitaires middleware (inject id)
-**Critères**:
+      **Critères**:
 - [ ] Aucune fuite token dans logs
-**Labels**: backend,observability,size:M,priority:high
-**Dépendances**: A1
+      **Labels**: backend,observability,size:M,priority:high
+      **Dépendances**: A1
 
 ---
- 
+
 ### 15. [G1] Rate limiting global & endpoints sensibles
 
 **Contexte**: Protéger contre abus simples avant bêta.
@@ -326,25 +337,36 @@ Les 15 issues ci‑dessous sont prêtes à être créées sur GitHub.
 - [ ] Classe throttle custom si besoin (clé user-id or IP fallback)
 - [ ] Tests: dépassement → 429
 - [ ] Doc README section Sécurité rapide
-**Critères**:
+      **Critères**:
 - [ ] Match action limitée mais UX fluide (ex: 60/min)
-**Labels**: backend,security,size:S,priority:high
-**Dépendances**: A1
+      **Labels**: backend,security,size:S,priority:high
+      **Dépendances**: A1
 
 ## Gabarit Issue Standard
 
 ```md
 ### Contexte
+
 ...
+
 ### Objectif
+
 ...
+
 ### Tâches
+
 - [ ] ...
+
 ### Critères d’acceptation
+
 - [ ] ...
+
 ### Tests
+
 Unit: ... / API: ... / Front: ...
+
 ### Risques / Mitigation
+
 ...
 Labels: ...,size:?,priority:?
 Dépendances: #ID
@@ -355,4 +377,5 @@ Dépendances: #ID
 Créer un Projet GitHub (Backlog / In Progress / Review / Done) et lier les issues ci‑dessus.
 
 ---
-_Dernière mise à jour : initial commit roadmap._
+
+_Dernière mise à jour : ajout vue compacte par milestone._
