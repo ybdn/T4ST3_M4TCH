@@ -22,6 +22,10 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+# Constantes de validation des années pour la normalisation DTO
+MIN_VALID_YEAR = 1800
+MAX_VALID_YEAR = 2500
+
 
 class RecommendationService:
     """Service pour générer des recommandations personnalisées"""
@@ -101,11 +105,56 @@ class RecommendationService:
         for item in mixed:
             if item['external_id'] not in seen_ids:
                 seen_ids.add(item['external_id'])
+                # Normaliser le DTO avant ajout à la liste finale
+                self._apply_normalized_dto(item)
                 unique_mixed.append(item)
         
         total_time = time.time() - start_time
         logger.info(f"Returned {len(unique_mixed)} unique recommendations in {total_time:.3f}s")
         return unique_mixed[:count]
+
+    # ----------------------------
+    # Normalisation DTO
+    # ----------------------------
+    def _apply_normalized_dto(self, item: Dict[str, Any]) -> None:
+        """Enrichit l'item en place avec un DTO unifié:
+        id, title, source, type, year, thumbnail.
+        Conserve rétro-compatibilité (n'écrase pas les champs existants utilisés par le reste du code/tests).
+        """
+        try:
+            # id
+            if 'id' not in item:
+                item['id'] = item.get('external_id')
+            # type
+            if 'type' not in item:
+                item['type'] = item.get('content_type')
+            # Préparer metadata une seule fois
+            md = item.get('metadata', {}) or {}
+            # thumbnail
+            if 'thumbnail' not in item:
+                item['thumbnail'] = item.get('poster_url') or md.get('poster_url')
+            # year
+            if 'year' not in item:
+                year = None
+                # Chercher différentes clés de date
+                date_candidates = [
+                    md.get('release_date'),
+                    md.get('first_air_date'),
+                    md.get('published_date'),
+                    md.get('first_publish_year'),
+                    md.get('publishedDate'),  # variations possibles
+                    md.get('published_date'),
+                ]
+                for d in date_candidates:
+                    if isinstance(d, str) and len(d) >= 4 and d[:4].isdigit():
+                        year = int(d[:4])
+                        break
+                    if isinstance(d, int) and MIN_VALID_YEAR <= d <= MAX_VALID_YEAR:
+                        year = d
+                        break
+                item['year'] = year
+        except Exception as e:
+            logger.warning(f"DTO normalization failed for item {item.get('external_id')}: {e}")
     
     def _get_movie_recommendations(self, user: User, count: int) -> TypingList[Dict]:
         if not self.tmdb_api_key:
