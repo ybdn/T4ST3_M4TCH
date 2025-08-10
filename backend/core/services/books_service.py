@@ -7,6 +7,7 @@ import requests
 from typing import Dict, List, Optional, Any
 from django.conf import settings
 from ..models import APICache
+from .cached_external_api_service import CachedExternalAPIService
 import hashlib
 import logging
 
@@ -22,37 +23,17 @@ class BooksService:
         self.google_api_key = getattr(settings, 'GOOGLE_BOOKS_API_KEY', None)
         if not self.google_api_key:
             logger.warning("GOOGLE_BOOKS_API_KEY not configured, using basic access")
+        
+        # Utiliser le nouveau service de cache centralisé
+        self.cache_service = CachedExternalAPIService('books')
     
     def _make_request(self, url: str, params: Dict = None) -> Optional[Dict]:
         """Effectue une requête avec gestion d'erreur et cache"""
         if params is None:
             params = {}
         
-        # Clé de cache
-        cache_key = f"google_books_{hashlib.md5(f'{url}_{str(params)}'.encode()).hexdigest()}"
-        
-        # Vérifier le cache
-        cached_data = APICache.get_cached_data(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            # Mettre en cache pour 12 heures
-            APICache.set_cached_data(cache_key, data, ttl_hours=12)
-            
-            return data
-            
-        except requests.RequestException as e:
-            logger.error(f"Google Books API error for {url}: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error with Google Books API: {e}")
-            return None
+        # Utiliser le service de cache centralisé
+        return self.cache_service.get_external(url, params)
     
     def search_books(self, query: str, limit: int = 10) -> List[Dict]:
         """Recherche de livres via Google Books API"""

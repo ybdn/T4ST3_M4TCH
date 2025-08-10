@@ -7,6 +7,7 @@ import requests
 from typing import Dict, List, Optional, Any
 from django.conf import settings
 from ..models import APICache
+from .cached_external_api_service import CachedExternalAPIService
 import hashlib
 import logging
 
@@ -24,6 +25,9 @@ class TMDBService:
         if not self.api_key:
             logger.warning("TMDB_API_KEY not configured in settings")
             self.api_key = "demo_key"  # Pour les tests
+        
+        # Utiliser le nouveau service de cache centralisé
+        self.cache_service = CachedExternalAPIService('tmdb')
     
     def _make_request(self, endpoint: str, params: Dict = None) -> Optional[Dict]:
         """Effectue une requête vers l'API TMDB avec gestion d'erreur et cache"""
@@ -33,32 +37,9 @@ class TMDBService:
         params['api_key'] = self.api_key
         params['language'] = 'fr-FR'  # Priorité au français
         
-        # Clé de cache basée sur l'endpoint et les paramètres
-        cache_key = f"tmdb_{hashlib.md5(f'{endpoint}_{str(params)}'.encode()).hexdigest()}"
-        
-        # Vérifier le cache d'abord
-        cached_data = APICache.get_cached_data(cache_key)
-        if cached_data:
-            return cached_data
-        
-        try:
-            url = f"{self.BASE_URL}{endpoint}"
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            # Mettre en cache pour 6 heures
-            APICache.set_cached_data(cache_key, data, ttl_hours=6)
-            
-            return data
-            
-        except requests.RequestException as e:
-            logger.error(f"TMDB API error for {endpoint}: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error with TMDB API: {e}")
-            return None
+        # Utiliser le service de cache centralisé
+        url = f"{self.BASE_URL}{endpoint}"
+        return self.cache_service.get_external(url, params)
     
     def search_movies(self, query: str, limit: int = 10) -> List[Dict]:
         """Recherche de films"""

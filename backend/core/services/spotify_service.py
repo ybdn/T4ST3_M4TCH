@@ -8,6 +8,7 @@ import base64
 from typing import Dict, List, Optional, Any
 from django.conf import settings
 from ..models import APICache
+from .cached_external_api_service import CachedExternalAPIService
 import hashlib
 import logging
 
@@ -31,6 +32,8 @@ class SpotifyService:
             self.client_secret = "demo_client_secret"
         
         self._access_token = None
+        # Utiliser le nouveau service de cache centralisé
+        self.cache_service = CachedExternalAPIService('spotify')
     
     def _get_access_token(self) -> Optional[str]:
         """Récupère un token d'accès via Client Credentials Flow"""
@@ -88,34 +91,18 @@ class SpotifyService:
         if params is None:
             params = {}
         
-        # Clé de cache
-        cache_key = f"spotify_{hashlib.md5(f'{endpoint}_{str(params)}'.encode()).hexdigest()}"
+        # Préparer les headers avec le token
+        headers = {'Authorization': f'Bearer {token}'}
         
-        # Vérifier le cache
-        cached_data = APICache.get_cached_data(cache_key)
-        if cached_data:
-            return cached_data
+        # Utiliser le service de cache centralisé
+        url = f"{self.BASE_URL}{endpoint}"
+        data = self.cache_service.get_external(url, params, headers)
         
-        try:
-            headers = {'Authorization': f'Bearer {token}'}
-            url = f"{self.BASE_URL}{endpoint}"
-            
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            # Mettre en cache pour 2 heures
-            APICache.set_cached_data(cache_key, data, ttl_hours=2)
-            
-            return data
-            
-        except requests.RequestException as e:
-            logger.error(f"Spotify API error for {endpoint}: {e}")
+        if data is None:
+            # Fallback vers les données de démo en cas d'erreur
             return self._get_demo_data(endpoint, params)
-        except Exception as e:
-            logger.error(f"Unexpected error with Spotify API: {e}")
-            return self._get_demo_data(endpoint, params)
+        
+        return data
     
     def _get_demo_data(self, endpoint: str, params: Dict = None) -> Optional[Dict]:
         """Retourne des données de démo pour les tests"""

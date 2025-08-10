@@ -168,3 +168,9 @@ TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 GOOGLE_BOOKS_API_KEY = os.environ.get('GOOGLE_BOOKS_API_KEY')
+
+# Cache TTL configuration (in hours) from environment
+CACHE_TTL_TMDB_HOURS = int(os.environ.get('CACHE_TTL_TMDB_HOURS', '6'))
+CACHE_TTL_SPOTIFY_HOURS = int(os.environ.get('CACHE_TTL_SPOTIFY_HOURS', '2'))
+CACHE_TTL_BOOKS_HOURS = int(os.environ.get('CACHE_TTL_BOOKS_HOURS', '12'))
+CACHE_TTL_DEFAULT_HOURS = int(os.environ.get('CACHE_TTL_DEFAULT_HOURS', '4'))
