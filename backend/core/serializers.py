@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import List, ListItem, ExternalReference
+from .models import List, ListItem, ExternalReference, VersusMatch, VersusRound, VersusChoice
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -91,3 +91,77 @@ class ListSerializer(serializers.ModelSerializer):
             validated_data['description'] = List.get_default_description(validated_data['category'])
         
         return super().create(validated_data)
+
+
+class VersusChoiceSerializer(serializers.ModelSerializer):
+    """Serializer pour les choix dans un round versus"""
+    player_name = serializers.CharField(source='player.username', read_only=True)
+    chosen_item_title = serializers.CharField(source='chosen_item.title', read_only=True)
+    
+    class Meta:
+        model = VersusChoice
+        fields = ('id', 'player', 'player_name', 'chosen_item', 'chosen_item_title', 'created_at')
+        read_only_fields = ('id', 'created_at')
+
+
+class VersusRoundSerializer(serializers.ModelSerializer):
+    """Serializer pour les rounds versus"""
+    item1_data = ListItemSerializer(source='item1', read_only=True)
+    item2_data = ListItemSerializer(source='item2', read_only=True)
+    choices = VersusChoiceSerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = VersusRound
+        fields = (
+            'id', 'round_number', 'item1', 'item2', 'item1_data', 'item2_data',
+            'status', 'status_display', 'choices', 'created_at', 'completed_at'
+        )
+        read_only_fields = ('id', 'created_at', 'completed_at')
+
+
+class VersusMatchSerializer(serializers.ModelSerializer):
+    """Serializer pour les matchs versus"""
+    player1_name = serializers.CharField(source='player1.username', read_only=True)
+    player2_name = serializers.CharField(source='player2.username', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    current_round_data = serializers.SerializerMethodField()
+    winner = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = VersusMatch
+        fields = (
+            'id', 'player1', 'player1_name', 'player2', 'player2_name',
+            'category', 'category_display', 'status', 'status_display',
+            'current_round', 'total_rounds', 'player1_score', 'player2_score',
+            'current_round_data', 'winner', 'created_at', 'updated_at', 'completed_at'
+        )
+        read_only_fields = ('id', 'created_at', 'updated_at', 'completed_at')
+    
+    def get_current_round_data(self, obj):
+        """Retourne les données du round actuel"""
+        current_round = obj.get_current_round_obj()
+        if current_round:
+            return VersusRoundSerializer(current_round).data
+        return None
+    
+    def get_winner(self, obj):
+        """Retourne le gagnant du match"""
+        winner = obj.get_winner()
+        if winner:
+            return {'id': winner.id, 'username': winner.username}
+        return None
+
+
+class VersusChoiceSubmissionSerializer(serializers.Serializer):
+    """Serializer pour soumettre un choix dans un round"""
+    chosen_item_id = serializers.IntegerField()
+    
+    def validate_chosen_item_id(self, value):
+        """Valide que l'élément choisi existe"""
+        try:
+            ListItem.objects.get(id=value)
+        except ListItem.DoesNotExist:
+            raise serializers.ValidationError("L'élément choisi n'existe pas")
+        return value

@@ -2,11 +2,15 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, viewsets, serializers
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q, Count
 from django.core.cache import cache
-from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
-from .models import List, ListItem, ExternalReference
+from .serializers import (
+    RegisterSerializer, ListSerializer, ListItemSerializer,
+    VersusMatchSerializer, VersusRoundSerializer, VersusChoiceSerializer,
+    VersusChoiceSubmissionSerializer
+)
+from .models import List, ListItem, ExternalReference, VersusMatch, VersusRound, VersusChoice
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
 import json
@@ -1160,5 +1164,135 @@ def get_external_details(request, source, external_id):
         logger.error(f"External details error: {e}")
         return Response(
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_versus_choice(request, match_id):
+    """
+    POST /versus/matches/{id}/choice
+    Soumet le choix d'un utilisateur dans un round versus
+    """
+    try:
+        # Utiliser une transaction pour éviter les conditions de concurrence
+        with transaction.atomic():
+            # Récupérer le match et vérifier l'accès
+            try:
+                match = VersusMatch.objects.select_for_update().get(
+                    id=match_id,
+                    status=VersusMatch.Status.ACTIVE
+                )
+            except VersusMatch.DoesNotExist:
+                return Response(
+                    {'error': 'Match non trouvé ou non actif'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Vérifier que l'utilisateur fait partie du match
+            if not match.is_player(request.user):
+                return Response(
+                    {'error': 'Vous ne participez pas à ce match'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Récupérer le round actuel
+            current_round = match.get_current_round_obj()
+            if not current_round:
+                return Response(
+                    {'error': 'Aucun round actuel trouvé'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Vérifier si l'utilisateur a déjà fait son choix (double soumission)
+            if current_round.has_player_chosen(request.user):
+                return Response(
+                    {'error': 'Vous avez déjà fait votre choix pour ce round'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Valider les données de la requête
+            serializer = VersusChoiceSubmissionSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            chosen_item_id = serializer.validated_data['chosen_item_id']
+            
+            # Vérifier que l'élément choisi fait partie du round
+            try:
+                chosen_item = ListItem.objects.get(id=chosen_item_id)
+            except ListItem.DoesNotExist:
+                return Response(
+                    {'error': 'Élément choisi non trouvé'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if chosen_item not in current_round.get_items():
+                return Response(
+                    {'error': 'L\'élément choisi ne fait pas partie de ce round'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Créer le choix
+            choice = VersusChoice.objects.create(
+                round=current_round,
+                player=request.user,
+                chosen_item=chosen_item
+            )
+            
+            # Vérifier si c'est le deuxième choix (round terminé)
+            if current_round.is_complete():
+                # Terminer le round et calculer les scores
+                current_round.complete_round()
+                
+                # Vérifier la détection like/like
+                choices = list(current_round.choices.all())
+                both_liked_same = choices[0].chosen_item == choices[1].chosen_item
+                
+                # Avancer au round suivant ou terminer le match
+                match.advance_to_next_round()
+                
+                # Recharger le match pour avoir les données à jour
+                match.refresh_from_db()
+                
+                # Préparer la réponse avec l'état du match
+                response_data = {
+                    'choice_submitted': True,
+                    'round_completed': True,
+                    'both_liked_same': both_liked_same,
+                    'match_state': VersusMatchSerializer(match).data
+                }
+                
+                if both_liked_same:
+                    response_data['message'] = 'Vous avez tous les deux aimé le même élément ! +1 point chacun'
+                
+                if match.status == VersusMatch.Status.COMPLETED:
+                    response_data['match_completed'] = True
+                    winner = match.get_winner()
+                    if winner:
+                        response_data['winner'] = {
+                            'id': winner.id,
+                            'username': winner.username
+                        }
+                        response_data['message'] = f'Match terminé ! {winner.username} a gagné !'
+                    else:
+                        response_data['message'] = 'Match terminé ! C\'est une égalité !'
+                
+            else:
+                # Premier choix, attendre l'autre joueur
+                response_data = {
+                    'choice_submitted': True,
+                    'round_completed': False,
+                    'waiting_for_other_player': True,
+                    'match_state': VersusMatchSerializer(match).data
+                }
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
+            
+    except Exception as e:
+        logger.error(f"Versus choice submission error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la soumission du choix: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

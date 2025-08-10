@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+import random
 
 
 class List(models.Model):
@@ -231,3 +232,254 @@ class APICache(models.Model):
     def clean_expired(cls):
         """Nettoie les entrées de cache expirées"""
         return cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class VersusMatch(models.Model):
+    """Match entre deux utilisateurs pour comparer leurs goûts"""
+    
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'En attente'
+        ACTIVE = 'active', 'En cours'
+        COMPLETED = 'completed', 'Terminé'
+        CANCELLED = 'cancelled', 'Annulé'
+    
+    player1 = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='matches_as_player1',
+        verbose_name="Joueur 1"
+    )
+    player2 = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='matches_as_player2',
+        verbose_name="Joueur 2"
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=List.Category.choices,
+        verbose_name="Catégorie"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="Statut"
+    )
+    current_round = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Round actuel"
+    )
+    total_rounds = models.PositiveIntegerField(
+        default=10,
+        verbose_name="Nombre total de rounds"
+    )
+    player1_score = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Score joueur 1"
+    )
+    player2_score = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Score joueur 2"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Date de modification"
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fin"
+    )
+    
+    class Meta:
+        verbose_name = "Match Versus"
+        verbose_name_plural = "Matchs Versus"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.player1.username} vs {self.player2.username} ({self.get_category_display()})"
+    
+    def get_players(self):
+        """Retourne les deux joueurs"""
+        return [self.player1, self.player2]
+    
+    def get_current_round_obj(self):
+        """Retourne l'objet du round actuel"""
+        return self.rounds.filter(round_number=self.current_round).first()
+    
+    def is_player(self, user):
+        """Vérifie si l'utilisateur participe à ce match"""
+        return user in [self.player1, self.player2]
+    
+    def advance_to_next_round(self):
+        """Passe au round suivant ou termine le match"""
+        if self.current_round < self.total_rounds:
+            self.current_round += 1
+            self.save()
+        else:
+            self.status = self.Status.COMPLETED
+            self.completed_at = timezone.now()
+            self.save()
+    
+    def get_winner(self):
+        """Retourne le gagnant du match"""
+        if self.status != self.Status.COMPLETED:
+            return None
+        if self.player1_score > self.player2_score:
+            return self.player1
+        elif self.player2_score > self.player1_score:
+            return self.player2
+        return None  # Égalité
+
+
+class VersusRound(models.Model):
+    """Round individuel dans un match versus"""
+    
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'En attente'
+        ACTIVE = 'active', 'En cours'
+        COMPLETED = 'completed', 'Terminé'
+    
+    match = models.ForeignKey(
+        VersusMatch,
+        on_delete=models.CASCADE,
+        related_name='rounds',
+        verbose_name="Match"
+    )
+    round_number = models.PositiveIntegerField(
+        verbose_name="Numéro du round"
+    )
+    item1 = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        related_name='rounds_as_item1',
+        verbose_name="Élément 1"
+    )
+    item2 = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        related_name='rounds_as_item2',
+        verbose_name="Élément 2"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="Statut"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fin"
+    )
+    
+    class Meta:
+        verbose_name = "Round Versus"
+        verbose_name_plural = "Rounds Versus"
+        ordering = ['match', 'round_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['match', 'round_number'],
+                name='unique_round_per_match'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"Round {self.round_number} - {self.item1.title} vs {self.item2.title}"
+    
+    def get_items(self):
+        """Retourne les deux éléments du round"""
+        return [self.item1, self.item2]
+    
+    def has_player_chosen(self, user):
+        """Vérifie si un joueur a déjà fait son choix"""
+        return self.choices.filter(player=user).exists()
+    
+    def get_player_choice(self, user):
+        """Retourne le choix d'un joueur"""
+        return self.choices.filter(player=user).first()
+    
+    def is_complete(self):
+        """Vérifie si les deux joueurs ont fait leur choix"""
+        return self.choices.count() == 2
+    
+    def complete_round(self):
+        """Marque le round comme terminé et calcule les scores"""
+        if not self.is_complete():
+            return False
+        
+        choices = list(self.choices.all())
+        choice1, choice2 = choices[0], choices[1]
+        
+        # Détection like/like (même élément choisi)
+        if choice1.chosen_item == choice2.chosen_item:
+            # Point pour chaque joueur si ils ont choisi le même élément
+            self.match.player1_score += 1
+            self.match.player2_score += 1
+        
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.save()
+        
+        self.match.save()
+        return True
+
+
+class VersusChoice(models.Model):
+    """Choix d'un joueur dans un round"""
+    
+    round = models.ForeignKey(
+        VersusRound,
+        on_delete=models.CASCADE,
+        related_name='choices',
+        verbose_name="Round"
+    )
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Joueur"
+    )
+    chosen_item = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        verbose_name="Élément choisi"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date du choix"
+    )
+    
+    class Meta:
+        verbose_name = "Choix Versus"
+        verbose_name_plural = "Choix Versus"
+        ordering = ['created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['round', 'player'],
+                name='unique_choice_per_player_per_round'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"{self.player.username} choisit {self.chosen_item.title}"
+    
+    def clean(self):
+        """Validation personnalisée"""
+        from django.core.exceptions import ValidationError
+        
+        # Vérifier que le joueur fait partie du match
+        if not self.round.match.is_player(self.player):
+            raise ValidationError("Ce joueur ne fait pas partie de ce match")
+        
+        # Vérifier que l'élément choisi fait partie du round
+        if self.chosen_item not in self.round.get_items():
+            raise ValidationError("L'élément choisi ne fait pas partie de ce round")
