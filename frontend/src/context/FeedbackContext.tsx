@@ -1,5 +1,6 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useUserFeedback } from '../components/UserFeedback';
+import React, { createContext, useContext } from "react";
+import type { ReactNode } from "react";
+import { useUserFeedback } from "../components/UserFeedback";
 
 interface FeedbackContextType {
   showSuccess: (message: string, duration?: number) => string;
@@ -8,13 +9,17 @@ interface FeedbackContextType {
   showInfo: (message: string, duration?: number) => string;
 }
 
-const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
+const FeedbackContext = createContext<FeedbackContextType | undefined>(
+  undefined
+);
 
 interface FeedbackProviderProps {
   children: ReactNode;
 }
 
-export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) => {
+export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({
+  children,
+}) => {
   const feedback = useUserFeedback();
 
   return (
@@ -27,7 +32,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
 export const useFeedback = (): FeedbackContextType => {
   const context = useContext(FeedbackContext);
   if (context === undefined) {
-    throw new Error('useFeedback must be used within a FeedbackProvider');
+    throw new Error("useFeedback must be used within a FeedbackProvider");
   }
   return context;
 };

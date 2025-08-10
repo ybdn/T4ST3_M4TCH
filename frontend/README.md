@@ -14,12 +14,12 @@ Style global: **noir et blanc épuré**, inspiré de X.com avec effets de verre 
 - **Texte secondaire**: `#e7e9ea` (blanc cassé)
 - **Texte muted**: `#71767b` (gris moyen)
 
-#### Accent et interactions  
+#### Accent et interactions
 
 - **Primaire**: `#e11d48` (rose néon) - pour CTAs et éléments importants
 - **Bordures**: `rgba(255,255,255,0.08)` (blanc transparent)
-- **Effets de verre premium**: 
-  - Verre translucide: `rgba(255,255,255,0.05)` à `rgba(255,255,255,0.15)` avec backdrop-blur  
+- **Effets de verre premium**:
+  - Verre translucide: `rgba(255,255,255,0.05)` à `rgba(255,255,255,0.15)` avec backdrop-blur
   - Bordures lumineuses: `rgba(255,255,255,0.20)` à `rgba(255,255,255,0.40)`
   - Reflets internes: `rgba(255,255,255,0.15)` à `rgba(255,255,255,0.30)`
   - Saturation: `180%` pour intensifier les couleurs à travers le verre
@@ -34,7 +34,7 @@ Style global: **noir et blanc épuré**, inspiré de X.com avec effets de verre 
 #### Classes CSS spécialisées
 
 - **`.tm-glass`**: Verre léger pour petits éléments
-- **`.tm-glass-card`**: Verre renforcé pour cartes principales  
+- **`.tm-glass-card`**: Verre renforcé pour cartes principales
 - **`.tm-glass-input`**: Optimisé pour les champs de saisie
 - **`.tm-glass-button`**: Boutons avec effets vitreux premium
 
@@ -46,7 +46,7 @@ Ces couleurs sont configurées dans `tailwind.config.cjs` avec le préfixe `tm-`
 
 ### Échelle typographique dorée
 
-- **`.phi-title`**: `2.618rem` (≈42px) - Titres principaux comme "T4ST3 M4TCH" 
+- **`.phi-title`**: `2.618rem` (≈42px) - Titres principaux comme "T4ST3 M4TCH"
 - **`.phi-subtitle`**: `1.618rem` (≈26px) - Sous-titres et titres secondaires
 - **`.phi-label`**: `0.875rem` (14px) - Labels de formulaires
 - **`.phi-description`**: `0.75rem` (12px) - Textes d'aide et descriptions
@@ -56,13 +56,13 @@ Ces couleurs sont configurées dans `tailwind.config.cjs` avec le préfixe `tm-`
 
 #### Conteneurs
 
-- **`.phi-container`**: `25.888rem` (≈415px) - Largeur optimale des 
-formulaires
+- **`.phi-container`**: `25.888rem` (≈415px) - Largeur optimale des
+  formulaires
 
-#### Éléments d'interaction  
+#### Éléments d'interaction
 
 - **`.phi-input`**: Hauteur `3.236rem` (≈52px), padding `0.764rem × 1.236rem`
-- **`.phi-button`**: Hauteur `3.236rem`, padding `0.764rem × 1.618rem`  
+- **`.phi-button`**: Hauteur `3.236rem`, padding `0.764rem × 1.618rem`
 
 #### Cartes et surfaces
 
@@ -72,13 +72,13 @@ formulaires
 #### Espacements systémiques
 
 - **`.phi-gap`**: `1.618rem` - Espacement principal entre sections
-- **`.phi-gap-small`**: `1rem` - Espacement secondaire  
+- **`.phi-gap-small`**: `1rem` - Espacement secondaire
 - **`.phi-gap-mini`**: `0.618rem` - Micro-espacements pour éléments proches
 
 ### Typographie épurée
 
 - **Branding titres**: font-cinzel, toujours en blanc (`text-white`) avec classes `.phi-title/.phi-subtitle`
-- **Interface utilisateur**: font-inter, 400/600/700 (lisible, moderne)  
+- **Interface utilisateur**: font-inter, 400/600/700 (lisible, moderne)
 - **Boutons**: font-semibold, classes `.phi-button`
 - **Labels/descriptions**: classes `.phi-label/.phi-description` avec couleurs nuancées
 
@@ -121,7 +121,7 @@ Ces composants sont construits avec des `div` standards et stylisés via Tailwin
 
 ### Architecture CSS
 
-- **Design System**: Basé sur Tailwind avec palette personnalisée (tm-*)
+- **Design System**: Basé sur Tailwind avec palette personnalisée (tm-\*)
 - **Component Pattern**: Composants réutilisables avec classes Tailwind
 - **Responsive Design**: Mobile-first avec breakpoints Tailwind
 - **Dark Theme**: Thème sombre unique avec effets de verre (backdrop-blur)
@@ -163,29 +163,26 @@ Définies dans `src/index.css` (`--tm-*`) pour les valeurs globales comme les gr
 
 ## 🌐 Connexion au Backend et Déploiement
 
-### Communication avec l'API
+\n### Communication avec l'API
 Le frontend est découplé du backend et communique avec lui via des appels à une API REST. L'adresse de base de cette API est configurable via une variable d'environnement pour s'adapter à différents environnements (local, production).
 
 La logique de configuration se trouve dans `src/config.ts` et se base sur la variable `VITE_API_URL` fournie par Vite.
 
-### Développement Local
+\n### Développement Local
 Pour le développement local, le frontend doit pointer vers l'API qui tourne sur `localhost:8000`. Le code utilise cette adresse par défaut si `VITE_API_URL` n'est pas définie.
 
 Il est recommandé de créer un fichier `.env.local` à la racine du dossier `frontend/` pour spécifier explicitement l'URL :
-```env
-# frontend/.env.local
-VITE_API_URL=http://localhost:8000
-```
 
-### Environnement de Production (Render)
+Fichier `frontend/.env.local` : `VITE_API_URL="http://localhost:8000"`
+
+\n### Environnement de Production (Render)
 Lorsque le frontend est déployé sur Render, il doit connaître l'adresse publique du service backend.
-1.  Allez dans les paramètres de votre service **frontend** sur Render.
-2.  Cliquez sur la section **"Environment"**.
-3.  Ajoutez ou modifiez la variable d'environnement :
-    *   **Key :** `VITE_API_URL`
-    *   **Value :** `https://tastematch-api.onrender.com` (ou l'URL publique de votre service backend).
+\n1. Allez dans les paramètres de votre service **frontend** sur Render. 2. Cliquez sur la section **"Environment"**. 3. Ajoutez ou modifiez la variable d'environnement :
 
-### Déploiement
+- **Key :** `VITE_API_URL`
+- **Value :** `https://tastematch-api.onrender.com` (ou l'URL publique de votre service backend).
+
+\n### Déploiement
 Le service est déployé sur Render. Pour la configuration d'un nom de domaine personnalisé, veuillez vous référer à la section `🌐 Déploiement et Environnement de Production` dans le `README.md` principal à la racine du projet.
 
 ## 🚀 Démarrage
@@ -196,18 +193,18 @@ Le service est déployé sur Render. Pour la configuration d'un nom de domaine p
 ## 📁 Arborescence
 
 src/
-├── components/       # Composants réutilisables
-│   ├── AppBottomNav.tsx
-│   ├── AppHeader.tsx
-│   └── ...
-├── pages/            # Vues principales de l'application
-│   ├── HomePage.tsx
-│   └── ...
-├── context/          # Contexte React (ex: Auth, Feedback)
-├── hooks/            # Hooks personnalisés
-├── services/         # Logique métier, appels API
-├── main.tsx          # Point d'entrée de l'application
-└── index.css         # Styles globaux et variables CSS
+├── components/ # Composants réutilisables
+│ ├── AppBottomNav.tsx
+│ ├── AppHeader.tsx
+│ └── ...
+├── pages/ # Vues principales de l'application
+│ ├── HomePage.tsx
+│ └── ...
+├── context/ # Contexte React (ex: Auth, Feedback)
+├── hooks/ # Hooks personnalisés
+├── services/ # Logique métier, appels API
+├── main.tsx # Point d'entrée de l'application
+└── index.css # Styles globaux et variables CSS
 
 ## 🧪 Bonnes pratiques UI/UX
 
@@ -226,7 +223,7 @@ src/
 - **Espacements**: `.phi-gap`, `.phi-gap-small`, `.phi-gap-mini` uniquement
 - **Cartes**: `.phi-card` ou `.phi-small-card` selon l'importance
 
-#### Typographie harmonieuse  
+#### Typographie harmonieuse
 
 - **Titres principaux**: `.phi-title` + `font-cinzel` + `text-white`
 - **Sous-titres**: `.phi-subtitle` + `font-cinzel` + `text-tm-text`
@@ -251,9 +248,9 @@ src/
 #### Styles visuels
 
 - **Jamais** de gradients sur les titres → Blanc pur uniquement
-- **Jamais** de couleurs pleines → Toujours effets de verre translucides  
+- **Jamais** de couleurs pleines → Toujours effets de verre translucides
 - **Jamais** d'icônes décoratives au-dessus des titres
-- **Jamais** de rounded-* autre que `rounded-xl`
+- **Jamais** de rounded-\* autre que `rounded-xl`
 
 ### 🔧 Migration des pages existantes
 
@@ -270,7 +267,7 @@ src/
 #### Pages prioritaires à migrer
 
 1. **HomePage** - Dashboard principal avec cartes de listes
-2. **ExplorePage** - Navigation et recherche avec suggestions  
+2. **ExplorePage** - Navigation et recherche avec suggestions
 3. **ListsPage** - Gestion des listes avec formulaires
 4. **MatchPage** - Interface de matching avec cartes interactives
 5. **QuickAddPage** - Ajout rapide avec recherche externe
@@ -300,7 +297,7 @@ src/
 - **Espacement**: Généreux, aéré (p-6, p-8)
 - **Bordures**: Subtiles, blanches transparentes
 
-#### ❌ Don't  
+#### ❌ Don't
 
 - **Gradients sur les titres**: Gardez les titres en blanc simple
 - **Icônes décoratives**: Évitez les icônes au-dessus des titres
@@ -315,7 +312,7 @@ src/
 - **🏆 SYSTÈME DE PROPORTIONS DORÉES**: Toute l'UI basée sur φ ≈ 1.618
 - **📐 Classes `.phi-*`**: Échelle typographique et spatiale mathématiquement parfaite
 - **🪟 Effets de verre premium**: Transparence blanche, reflets, saturation 180%
-- **✨ Boutons vitreux**: `.tm-glass-button` avec gradients et interactions premium  
+- **✨ Boutons vitreux**: `.tm-glass-button` avec gradients et interactions premium
 - **📏 Conteneurs optimaux**: `.phi-container` pour largeurs harmonieuses
 - **🎨 Guidelines complètes**: Documentation pour migration de toute l'app
 
@@ -332,11 +329,45 @@ src/
 
 - **Migration complète vers Headless UI + Tailwind CSS**
 - Suppression totale de Material-UI (@mui/material, @mui/icons-material)
-- Architecture CSS 100% Tailwind avec design system personnalisé (tm-*)
+- Architecture CSS 100% Tailwind avec design system personnalisé (tm-\*)
 - Composants intégralement refactorisés : AppHeader, AppBottomNav, UserFeedback
 - Thème sombre premium avec effets de verre (backdrop-blur-xl)
 - Stack moderne : React 19, Vite, TypeScript, Headless UI 2.2, Tailwind CSS 3.4
 
-### v2.1 (néon sombre épuré)  
+### v2.1 (néon sombre épuré)
 
 - Stack technique migrée vers Tailwind CSS et Headless UI. Thème sombre, Inter + Cinzel, header/nav translucides, icônes outlined/filled, cards à angles nets (0px radius) et gradient léger.
+
+## 📴 Features actuellement désactivées (stubs)
+
+Ces fonctionnalités ont été temporairement mises en stubs pour stabiliser la base (build propre, zéro dette TS) avant réintégration incrémentale.
+
+| Domaine      | Élément                                         | Statut                                                  | Fichier(s) concerné(s)                                | Plan de réactivation                                                          |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Social       | Profil (édition)                                | Désactivé (lecture si profil existe, sinon placeholder) | `components/SocialProfile.tsx`, `hooks/useSocial.ts`  | Réimplémenter fetch profil + mutation backend, réactiver états d'édition      |
+| Social       | Liste d'amis (requêtes / ajout réel)            | Simplifié (affichage liste vide)                        | `components/FriendsManager.tsx`, `hooks/useSocial.ts` | Rebrancher endpoints friends + friendRequests, réintroduire onglets & actions |
+| Social       | Friend requests                                 | Supprimé                                                | `components/FriendsManager.tsx`                       | Restaurer sous forme de second Tab avec mapping `friendRequests`              |
+| Versus       | Matchs & challenges                             | Stub très minimal                                       | `components/VersusMatch-simple.tsx`                   | Recréer logique de session + API versus, scores temps réel                    |
+| Match Global | API étendue (reco filtrées, pagination avancée) | Réduit au strict minimum                                | `services/matchApi.ts`                                | Réintroduire endpoints (pagination, catégories, stats) avec typage progressif |
+
+### Objectifs de réactivation progressive
+
+1. Réintroduire le profil social en lecture seule réelle (GET /profile)
+2. Ajouter mutation du profil (PATCH /profile) avec validation optimiste
+3. Rebrancher friends list (GET /friends) puis requests (GET /friend-requests)
+4. Activer actions add / accept / decline avec toasts unifiés
+5. Implémenter Versus (phases: création, rounds, scoring, historique)
+
+### Principes durant la réactivation
+
+- Chaque étape doit conserver le build sans erreur TypeScript
+- Couvrir les formes de données réintroduites avec types isolés puis mutualiser
+- Ajouter tests unitaires légers (hooks/services) avant d'étendre le périmètre
+- Pas de réintroduction massive: feature flags ou garde-fous conditionnels
+
+\n### Notes techniques sur les stubs
+`hooks/useSocial.ts` retourne des valeurs null / arrays vides mais déjà typées pour minimiser les changements côté composants. Lors de la réactivation, remplacer progressivement les stubs par des hooks réels, idéalement en conservant la même surface API pour éviter des refactors UI.
+
+---
+
+Dernière mise à jour de cette section: (placeholder – mettre à jour lors de la première réactivation sociale)

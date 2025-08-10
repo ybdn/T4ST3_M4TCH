@@ -9,6 +9,7 @@ from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
 from .models import List, ListItem, ExternalReference
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
+from .match_services import CompatibilityService
 import json
 import hashlib
 import logging
@@ -173,15 +174,15 @@ class ListItemViewSet(viewsets.ModelViewSet):
             
             serializer.save()
 
-        # Enrichissement automatique après création (best-effort, non bloquant)
+        # Enrichissement automatique après création (forcé pour assurer la cohérence)
         try:
             created_item = serializer.instance
             if created_item and created_item.list.category in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
                 enrichment_service = ExternalEnrichmentService()
-                enrichment_service.enrich_list_item(created_item, force_refresh=False)
-        except Exception:
+                enrichment_service.enrich_list_item(created_item, force_refresh=True)
+        except Exception as e:
             # Ne pas bloquer la création en cas d'erreur d'enrichissement
-            pass
+            logger.warning(f"Could not enrich item {created_item.id if 'created_item' in locals() else 'unknown'}: {e}")
 
 
 @api_view(['GET'])
@@ -363,12 +364,12 @@ def quick_add_item(request):
             position=max_position + 1
         )
         
-        # Enrichissement automatique (best-effort)
+        # Enrichissement automatique (forcé pour assurer la cohérence)
         try:
             enrichment_service = ExternalEnrichmentService()
-            enrichment_service.enrich_list_item(new_item, force_refresh=False)
-        except Exception:
-            pass
+            enrichment_service.enrich_list_item(new_item, force_refresh=True)
+        except Exception as e:
+            logger.warning(f"Could not enrich item {new_item.id}: {e}")
 
         # Sérialiser la réponse
         serializer = ListItemSerializer(new_item)
@@ -1160,5 +1161,810 @@ def get_external_details(request, source, external_id):
         logger.error(f"External details error: {e}")
         return Response(
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# ========================================
+# ENDPOINTS SYSTÈME MATCH GLOBAL + SOCIAL
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_match_recommendations(request):
+    """
+    Récupère des recommandations personnalisées pour le mode Global
+    """
+    try:
+        # Import tardif depuis un module sans conflit de nom de package
+        from .match_services import RecommendationService
+        
+        category = request.GET.get('category', None)
+        count = int(request.GET.get('count', 10))
+        
+        recommendation_service = RecommendationService()
+        recommendations = recommendation_service.get_recommendations(
+            user=request.user,
+            category=category,
+            count=count
+        )
+        
+        return Response({
+            'results': recommendations,
+            'count': len(recommendations),
+            'category': category
+        })
+        
+    except Exception as e:
+        logger.error(f"Match recommendations error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des recommandations: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# Manual enrichment functions removed - enrichment is now automatic
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_match_action(request):
+    """
+    Enregistre l'action d'un utilisateur sur une recommandation (like, dislike, add)
+    """
+    try:
+        from .match_services import RecommendationService
+        from .models import UserPreference, List, ListItem, ExternalReference
+        
+        external_id = request.data.get('external_id')
+        source = request.data.get('source')
+        content_type = request.data.get('content_type')
+        action = request.data.get('action')  # liked, disliked, added
+        title = request.data.get('title')
+        metadata = request.data.get('metadata', {})
+        poster_url = request.data.get('poster_url') or metadata.get('poster_url')
+        description_text = request.data.get('description') or metadata.get('description', '')
+        
+        if not all([external_id, source, content_type, action, title]):
+            return Response(
+                {'error': 'Champs requis manquants'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        recommendation_service = RecommendationService()
+        
+        # Construire l'objet content pour le service
+        content = {
+            'external_id': external_id,
+            'source': source,
+            'content_type': content_type,
+            'title': title,
+            'metadata': metadata
+        }
+        
+        # Enregistrer la préférence
+        preference = recommendation_service.mark_content_as_seen(
+            user=request.user,
+            content=content,
+            action=action
+        )
+        
+        response_data = {
+            'success': True,
+            'action': action,
+            'preference_id': preference.id
+        }
+        
+        # Si l'action est 'added', ajouter à la liste appropriée
+        if action == 'added':
+            try:
+                # Récupérer ou créer la liste pour cette catégorie
+                list_obj, created = List.objects.get_or_create(
+                    owner=request.user,
+                    category=content_type,
+                    defaults={
+                        'name': List.get_default_name(content_type),
+                        'description': List.get_default_description(content_type)
+                    }
+                )
+                
+                # Obtenir la position suivante
+                max_position = ListItem.objects.filter(list=list_obj).aggregate(
+                    models.Max('position')
+                )['position__max'] or 0
+                
+                # Créer l'élément de liste
+                list_item = ListItem.objects.create(
+                    title=title,
+                    description=description_text,
+                    position=max_position + 1,
+                    list=list_obj
+                )
+
+                # D'abord créer la référence externe avec les données MATCH pour préserver l'identification
+                external_ref = ExternalReference.objects.create(
+                    list_item=list_item,
+                    external_id=external_id,
+                    external_source=source,
+                    poster_url=poster_url,
+                    backdrop_url=metadata.get('backdrop_url'),
+                    metadata=metadata,
+                    rating=metadata.get('vote_average') or metadata.get('average_rating')
+                )
+                
+                # Puis tenter d'enrichir pour obtenir des données complètes
+                try:
+                    enrichment_service = ExternalEnrichmentService()
+                    enrichment_service.enrich_list_item(list_item, force_refresh=True)
+                except Exception as enrich_error:
+                    logger.warning(f"Could not enrich item {list_item.id}: {enrich_error}")
+                    # L'ExternalReference basique existe déjà, donc l'identification MATCH est préservée
+                
+                response_data['list_item_id'] = list_item.id
+                response_data['list_id'] = list_obj.id
+                
+            except Exception as add_error:
+                logger.warning(f"Could not add to list: {add_error}")
+                # Ne pas faire échouer la requête si l'ajout à la liste échoue
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Match action error: {e}")
+        return Response(
+            {'error': f'Erreur lors de l\'enregistrement de l\'action: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_social_profile(request):
+    """
+    Récupère le profil social de l'utilisateur connecté
+    """
+    try:
+        from .models import UserProfile, Friendship
+        
+        # Récupérer ou créer le profil
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'display_name': request.user.username
+            }
+        )
+        
+        # Compter les amis
+        friends_count = len(Friendship.get_friends(request.user))
+        
+        # Compter les demandes en attente
+        pending_requests = Friendship.objects.filter(
+            addressee=request.user,
+            status=Friendship.Status.PENDING
+        ).count()
+        
+        return Response({
+            'user_id': request.user.id,
+            'username': request.user.username,
+            'gamertag': profile.gamertag,
+            'display_name': profile.display_name,
+            'bio': profile.bio,
+            'avatar_url': profile.avatar_url,
+            'is_public': profile.is_public,
+            'stats': {
+                'total_matches': profile.total_matches,
+                'successful_matches': profile.successful_matches,
+                'friends_count': friends_count,
+                'pending_requests': pending_requests
+            },
+            'created_at': profile.created_at
+        })
+        
+    except Exception as e:
+        logger.error(f"Social profile error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération du profil: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_user_social_profile(request):
+    """
+    Met à jour le profil social de l'utilisateur
+    """
+    try:
+        from .models import UserProfile
+        
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={'display_name': request.user.username}
+        )
+        
+        # Champs modifiables
+        if 'display_name' in request.data:
+            profile.display_name = request.data['display_name']
+        if 'bio' in request.data:
+            profile.bio = request.data['bio']
+        if 'avatar_url' in request.data:
+            profile.avatar_url = request.data['avatar_url']
+        if 'is_public' in request.data:
+            profile.is_public = request.data['is_public']
+            
+        profile.save()
+        
+        return Response({
+            'success': True,
+            'gamertag': profile.gamertag,
+            'display_name': profile.display_name,
+            'bio': profile.bio,
+            'avatar_url': profile.avatar_url,
+            'is_public': profile.is_public
+        })
+        
+    except Exception as e:
+        logger.error(f"Update social profile error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la mise à jour: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_friend_by_gamertag(request):
+    """
+    Envoie une demande d'amitié via gamertag
+    """
+    try:
+        from .models import UserProfile, Friendship
+        
+        gamertag = request.data.get('gamertag')
+        if not gamertag:
+            return Response(
+                {'error': 'Gamertag requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Chercher l'utilisateur cible
+        try:
+            target_profile = UserProfile.objects.get(gamertag=gamertag)
+            target_user = target_profile.user
+        except UserProfile.DoesNotExist:
+            return Response(
+                {'error': 'Gamertag introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Vérifier qu'on n'essaie pas de s'ajouter soi-même
+        if target_user == request.user:
+            return Response(
+                {'error': 'Impossible de s\'ajouter soi-même'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier s'il y a déjà une relation
+        existing_friendship = Friendship.objects.filter(
+            models.Q(requester=request.user, addressee=target_user) |
+            models.Q(requester=target_user, addressee=request.user)
+        ).first()
+        
+        if existing_friendship:
+            if existing_friendship.status == Friendship.Status.ACCEPTED:
+                return Response(
+                    {'error': 'Vous êtes déjà amis'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            elif existing_friendship.status == Friendship.Status.PENDING:
+                return Response(
+                    {'error': 'Demande déjà envoyée'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            elif existing_friendship.status == Friendship.Status.BLOCKED:
+                return Response(
+                    {'error': 'Impossible d\'ajouter cet utilisateur'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Créer la demande d'amitié
+        friendship = Friendship.objects.create(
+            requester=request.user,
+            addressee=target_user,
+            status=Friendship.Status.PENDING
+        )
+        
+        return Response({
+            'success': True,
+            'friendship_id': friendship.id,
+            'target_user': {
+                'username': target_user.username,
+                'gamertag': target_profile.gamertag,
+                'display_name': target_profile.display_name
+            },
+            'status': 'pending'
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Add friend error: {e}")
+        return Response(
+            {'error': f'Erreur lors de l\'ajout d\'ami: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_user_by_gamertag(request, gamertag):
+    """
+    Recherche un utilisateur par gamertag
+    """
+    try:
+        from .models import UserProfile, Friendship
+        profile = UserProfile.objects.select_related('user').get(gamertag=gamertag)
+        # Déterminer relation actuelle
+        relation = Friendship.objects.filter(
+            models.Q(requester=request.user, addressee=profile.user) |
+            models.Q(requester=profile.user, addressee=request.user)
+        ).first()
+        relation_status = relation.status if relation else None
+        is_friend = relation_status == Friendship.Status.ACCEPTED
+        return Response({
+            'user_id': profile.user.id,
+            'username': profile.user.username,
+            'gamertag': profile.gamertag,
+            'display_name': profile.display_name,
+            'avatar_url': profile.avatar_url,
+            'is_public': profile.is_public,
+            'relation_status': relation_status,
+            'is_friend': is_friend
+        })
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Gamertag introuvable'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Search gamertag error: {e}")
+        return Response({'error': 'Erreur lors de la recherche'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_friend(request, user_id):
+    """
+    Supprime l'amitié entre l'utilisateur connecté et l'utilisateur cible
+    """
+    try:
+        from django.contrib.auth.models import User
+        from .models import Friendship
+        target = User.objects.get(id=user_id)
+        friendship = Friendship.objects.filter(
+            models.Q(requester=request.user, addressee=target) |
+            models.Q(requester=target, addressee=request.user),
+            status=Friendship.Status.ACCEPTED
+        ).first()
+        if not friendship:
+            return Response({'error': 'Amitié introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        friendship.delete()
+        return Response({'success': True})
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur introuvable'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Delete friend error: {e}")
+        return Response({'error': 'Erreur lors de la suppression'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_friends_list(request):
+    """
+    Récupère la liste des amis de l'utilisateur
+    """
+    try:
+        from .models import Friendship, UserProfile
+        
+        friends = Friendship.get_friends(request.user)
+        compatibility_service = CompatibilityService()
+        
+        friends_data = []
+        for friend in friends:
+            try:
+                profile = friend.profile
+                compatibility = compatibility_service.calculate_friend_compatibility(request.user, friend)
+                friends_data.append({
+                    'user_id': friend.id,
+                    'username': friend.username,
+                    'gamertag': profile.gamertag,
+                    'display_name': profile.display_name,
+                    'avatar_url': profile.avatar_url,
+                    'compatibility_score': compatibility
+                })
+            except UserProfile.DoesNotExist:
+                # Créer un profil si il n'existe pas
+                profile = UserProfile.objects.create(user=friend)
+                compatibility = compatibility_service.calculate_friend_compatibility(request.user, friend)
+                friends_data.append({
+                    'user_id': friend.id,
+                    'username': friend.username,
+                    'gamertag': profile.gamertag,
+                    'display_name': profile.display_name,
+                    'avatar_url': profile.avatar_url,
+                    'compatibility_score': compatibility
+                })
+        
+        return Response({
+            'friends': friends_data,
+            'count': len(friends_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Friends list error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des amis: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_friend_requests(request):
+    """
+    Récupère les demandes d'amitié reçues
+    """
+    try:
+        from .models import Friendship, UserProfile
+        
+        pending_requests = Friendship.objects.filter(
+            addressee=request.user,
+            status=Friendship.Status.PENDING
+        ).select_related('requester').order_by('-created_at')
+        
+        requests_data = []
+        for friendship in pending_requests:
+            requester = friendship.requester
+            try:
+                profile = requester.profile
+            except UserProfile.DoesNotExist:
+                profile = UserProfile.objects.create(user=requester)
+            
+            requests_data.append({
+                'friendship_id': friendship.id,
+                'requester': {
+                    'user_id': requester.id,
+                    'username': requester.username,
+                    'gamertag': profile.gamertag,
+                    'display_name': profile.display_name,
+                    'avatar_url': profile.avatar_url
+                },
+                'created_at': friendship.created_at
+            })
+        
+        return Response({
+            'requests': requests_data,
+            'count': len(requests_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Friend requests error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des demandes: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def respond_friend_request(request, friendship_id):
+    """
+    Répond à une demande d'amitié (accept/decline)
+    """
+    try:
+        from .models import Friendship
+        
+        action = request.data.get('action')  # 'accept' ou 'decline'
+        
+        if action not in ['accept', 'decline']:
+            return Response(
+                {'error': 'Action invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Récupérer la demande
+        try:
+            friendship = Friendship.objects.get(
+                id=friendship_id,
+                addressee=request.user,
+                status=Friendship.Status.PENDING
+            )
+        except Friendship.DoesNotExist:
+            return Response(
+                {'error': 'Demande d\'amitié introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Traiter l'action
+        if action == 'accept':
+            friendship.accept()
+            status_msg = 'accepted'
+        else:
+            friendship.decline()
+            status_msg = 'declined'
+        
+        return Response({
+            'success': True,
+            'friendship_id': friendship.id,
+            'action': action,
+            'status': status_msg
+        })
+        
+    except Exception as e:
+        logger.error(f"Respond friend request error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la réponse: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_versus_match(request):
+    """
+    Crée un nouveau match versus avec un ami
+    """
+    try:
+        from .match_services import VersusMatchService
+        from .models import UserProfile
+        
+        target_gamertag = request.data.get('target_gamertag')
+        rounds = int(request.data.get('rounds', 10))
+        
+        if not target_gamertag:
+            return Response(
+                {'error': 'Gamertag de l\'adversaire requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Trouver l'utilisateur cible
+        try:
+            target_profile = UserProfile.objects.get(gamertag=target_gamertag)
+            target_user = target_profile.user
+        except UserProfile.DoesNotExist:
+            return Response(
+                {'error': 'Utilisateur introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Créer le match via le service
+        versus_service = VersusMatchService()
+        match = versus_service.create_versus_match(
+            challenger=request.user,
+            challenged=target_user,
+            rounds=rounds
+        )
+        
+        return Response({
+            'success': True,
+            'match_id': match.id,
+            'match_type': match.match_type,
+            'total_rounds': match.total_rounds,
+            'opponent': {
+                'username': target_user.username,
+                'gamertag': target_profile.gamertag,
+                'display_name': target_profile.display_name
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except ValueError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(f"Create versus match error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la création du match: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_versus_matches(request):
+    """
+    Récupère les matchs versus de l'utilisateur
+    """
+    try:
+        from .models import FriendMatch, UserProfile
+        
+        matches = FriendMatch.objects.filter(
+            models.Q(user1=request.user) | models.Q(user2=request.user),
+            match_type=FriendMatch.MatchType.VERSUS_CHALLENGE
+        ).order_by('-last_activity')
+        
+        matches_data = []
+        for match in matches:
+            opponent = match.get_opponent(request.user)
+            try:
+                opponent_profile = opponent.profile
+            except UserProfile.DoesNotExist:
+                opponent_profile = UserProfile.objects.create(user=opponent)
+            
+            matches_data.append({
+                'match_id': match.id,
+                'opponent': {
+                    'username': opponent.username,
+                    'gamertag': opponent_profile.gamertag,
+                    'display_name': opponent_profile.display_name,
+                    'avatar_url': opponent_profile.avatar_url
+                },
+                'status': match.status,
+                'current_round': match.current_round,
+                'total_rounds': match.total_rounds,
+                'scores': {
+                    'your_score': match.get_user_score(request.user),
+                    'opponent_score': match.get_user_score(opponent)
+                },
+                'compatibility_score': match.compatibility_score,
+                'last_activity': match.last_activity,
+                'is_your_turn': match.sessions.filter(
+                    round_number=match.current_round
+                ).first() and match.sessions.get(
+                    round_number=match.current_round
+                ).is_waiting_for_user(request.user) if not match.is_completed() else False
+            })
+        
+        return Response({
+            'matches': matches_data,
+            'count': len(matches_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Get versus matches error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des matchs: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_versus_match_session(request, match_id):
+    """
+    Récupère la session actuelle d'un match versus
+    """
+    try:
+        from .models import FriendMatch
+        from .match_services import VersusMatchService
+        
+        # Vérifier que l'utilisateur participe au match
+        try:
+            match = FriendMatch.objects.get(
+                models.Q(user1=request.user) | models.Q(user2=request.user),
+                id=match_id
+            )
+        except FriendMatch.DoesNotExist:
+            return Response(
+                {'error': 'Match introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        versus_service = VersusMatchService()
+        current_session = versus_service.get_current_session(match)
+        
+        if not current_session:
+            return Response(
+                {'error': 'Aucune session active'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return Response({
+            'session_id': current_session.id,
+            'round_number': current_session.round_number,
+            'content': {
+                'external_id': current_session.content_external_id,
+                'type': current_session.content_type,
+                'source': current_session.content_source,
+                'title': current_session.content_title,
+                'metadata': current_session.content_metadata
+            },
+            'your_choice': current_session.get_user_choice(request.user),
+            'is_completed': current_session.is_completed,
+            'is_match': current_session.is_match if current_session.is_completed else None,
+            'match_progress': {
+                'current_round': match.current_round,
+                'total_rounds': match.total_rounds,
+                'scores': {
+                    'your_score': match.get_user_score(request.user),
+                    'opponent_score': match.get_user_score(match.get_opponent(request.user))
+                }
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Get versus session error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération de la session: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_versus_choice(request, match_id):
+    """
+    Enregistre le choix d'un utilisateur pour la session actuelle d'un match versus
+    """
+    try:
+        from .models import FriendMatch
+        from .match_services import VersusMatchService
+        
+        choice = request.data.get('choice')  # liked, disliked, skipped
+        
+        if choice not in ['liked', 'disliked', 'skipped']:
+            return Response(
+                {'error': 'Choix invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier que l'utilisateur participe au match
+        try:
+            match = FriendMatch.objects.get(
+                models.Q(user1=request.user) | models.Q(user2=request.user),
+                id=match_id
+            )
+        except FriendMatch.DoesNotExist:
+            return Response(
+                {'error': 'Match introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        versus_service = VersusMatchService()
+        result = versus_service.submit_choice(match, request.user, choice)
+        
+        if 'error' in result:
+            return Response(
+                {'error': result['error']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return Response(result)
+        
+    except Exception as e:
+        logger.error(f"Submit versus choice error: {e}")
+        return Response(
+            {'error': f'Erreur lors de l\'enregistrement du choix: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_versus_match_results(request, match_id):
+    """
+    Récupère les résultats complets d'un match versus terminé
+    """
+    try:
+        from .models import FriendMatch
+        from .match_services import VersusMatchService
+        
+        # Vérifier que l'utilisateur participe au match
+        try:
+            match = FriendMatch.objects.get(
+                models.Q(user1=request.user) | models.Q(user2=request.user),
+                id=match_id
+            )
+        except FriendMatch.DoesNotExist:
+            return Response(
+                {'error': 'Match introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        versus_service = VersusMatchService()
+        results = versus_service.get_match_results(match)
+        
+        return Response(results)
+        
+    except Exception as e:
+        logger.error(f"Get versus results error: {e}")
+        return Response(
+            {'error': f'Erreur lors de la récupération des résultats: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

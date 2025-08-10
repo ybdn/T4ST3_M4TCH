@@ -19,9 +19,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/**/*-backup.ts",
+    "src/**/*-backup.tsx",
+    "src/App-backup.tsx",
+    "src/**/TestPage.tsx"
+  ]
 }

@@ -133,6 +133,9 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
+backend/.venv/
+backend/db.sqlite3
 pip-log.txt
 pip-delete-this-directory.txt
 .tox/

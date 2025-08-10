@@ -1,0 +1,15 @@
+import React from 'react';
+
+// Placeholder minimal pendant refactor de la fonctionnalité d'ajout rapide
+const QuickAddPage: React.FC = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-white">
+      <div className="text-center p-8">
+        <h1 className="text-2xl font-bold mb-4">Ajout rapide désactivé</h1>
+        <p className="text-tm-text-secondary max-w-md">La fonctionnalité d'ajout rapide est en cours de refactorisation suite à la normalisation des données. Elle reviendra bientôt.</p>
+      </div>
+    </div>
+  );
+};
+
+export default QuickAddPage;

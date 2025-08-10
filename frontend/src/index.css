@@ -21,6 +21,11 @@
     -webkit-overflow-scrolling: touch;
     -webkit-tap-highlight-color: transparent;
     touch-action: pan-x pan-y;
+    
+    /* Correction Safari - Éliminer la bande blanche */
+    background-color: #000000 !important;
+    height: 100vh;
+    height: -webkit-fill-available;
   }
 
   /* iOS Safari optimizations */
@@ -44,7 +49,10 @@
 
   #root {
     height: 100vh;
+    height: -webkit-fill-available;
     overflow: hidden;
+    background-color: #000000;
+    position: relative;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -288,5 +296,111 @@
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari et Opera */
+  }
+  
+  /* Classes utilitaires pour les safe areas */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Adjustments pour header et footer fixes */
+  .main-content {
+    padding-top: 2.5rem; /* 40px - hauteur du header mobile */
+    padding-bottom: 3.5rem; /* 56px - hauteur du footer mobile */
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+  
+  @media (min-width: 768px) {
+    .main-content {
+      padding-top: 4rem; /* 64px - hauteur du header desktop */
+      padding-bottom: 3.5rem; /* 56px - hauteur du footer */
+    }
+  }
+  
+  .main-content-with-safe-area {
+    padding-top: calc(2.5rem + env(safe-area-inset-top)); /* header mobile + safe area */
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)); /* footer mobile + safe area */
+    height: 100vh;
+    overflow-y: auto;
+  }
+  
+  @media (min-width: 768px) {
+    .main-content-with-safe-area {
+      padding-top: calc(4rem + env(safe-area-inset-top)); /* header desktop + safe area */
+      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)); /* footer + safe area */
+    }
+  }
+  
+  /* Classe spécifique pour la page Match - pas de scroll, carte adaptée */
+  .match-container {
+    padding-top: calc(4rem + env(safe-area-inset-top)); /* header + safe area */
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom)); /* footer + safe area */
+    height: 100vh;
+    height: -webkit-fill-available; /* Corrige la hauteur sur mobile */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Pas de scroll */
+  }
+  
+  /* Carte Match adaptée à l'espace disponible - version mobile safe */
+  .match-card {
+    height: calc(100vh - 4rem - 5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem); /* viewport - header - navbar - safe areas - padding */
+    max-height: 520px; /* Augmenté légèrement */
+    min-height: 360px; /* Augmenté légèrement */
+  }
+  
+  /* Ajustements spécifiques pour iOS Safari */
+  @supports (-webkit-touch-callout: none) {
+    .match-container {
+      height: -webkit-fill-available;
+    }
+    
+    .match-card {
+      height: calc(-webkit-fill-available - 4rem - 5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2.5rem); /* Réduit la marge pour réduire l'espace */
+      max-height: 480px;
+      min-height: 320px;
+    }
+  }
+  
+  /* Pour les très petits écrans (iPhone SE, etc.) */
+  @media (max-height: 700px) {
+    .match-card {
+      height: calc(100vh - 4rem - 5rem - 3rem); /* Réduit l'espace */
+      max-height: 420px;
+      min-height: 300px;
+    }
+  }
+  
+  /* Header et navbar avec fond noir sur mobile uniquement */
+  .header-mobile-transparent {
+    background: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    backdrop-filter: none !important;
+  }
+  
+  .navbar-mobile-transparent {
+    background: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    backdrop-filter: none !important;
+  }
+  
+  /* Restaurer l'effet glass sur desktop */
+  @media (min-width: 768px) {
+    .header-mobile-transparent {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 1px 20px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .navbar-mobile-transparent {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 -1px 20px rgba(0, 0, 0, 0.3) !important;
+    }
   }
 }

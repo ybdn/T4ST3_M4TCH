@@ -50,10 +50,14 @@ const OpenInNewIcon = ({ className }: { className?: string }) => (
 // --- Types ---
 type ExternalReference = {
   poster_url?: string;
+  backdrop_url?: string;
   source?: string;
+  rating?: number;
+  release_date?: string;
   metadata?: {
     genres?: string[];
     backdrop_url?: string;
+    poster_url?: string;
     [key: string]: unknown;
   };
   // Ajoutez d'autres propriétés si nécessaire
@@ -89,16 +93,52 @@ const EnrichedListItem: React.FC<EnrichedListItemProps> = ({
   const [imageError, setImageError] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  // ... (logique getCategoryIcon, getSourceLabel, etc. reste la même)
+  // Fonction utilitaire pour obtenir l'URL du poster en gérant les deux structures
+  const getPosterUrl = () => {
+    if (!external_ref) return null;
+    // Priorité 1: poster_url direct sur external_ref
+    if (external_ref.poster_url) return external_ref.poster_url;
+    // Priorité 2: poster_url dans metadata
+    if (external_ref.metadata?.poster_url) return external_ref.metadata.poster_url;
+    return null;
+  };
+
+  // Fonction utilitaire pour obtenir l'URL du backdrop en gérant les deux structures
+  const getBackdropUrl = () => {
+    if (!external_ref) return null;
+    // Priorité 1: backdrop_url direct sur external_ref
+    if (external_ref.backdrop_url) return external_ref.backdrop_url;
+    // Priorité 2: backdrop_url dans metadata
+    if (external_ref.metadata?.backdrop_url) return external_ref.metadata.backdrop_url;
+    return null;
+  };
+
+  // Fonction utilitaire pour obtenir les genres
+  const getGenres = () => {
+    if (!external_ref?.metadata?.genres) return [];
+    return external_ref.metadata.genres;
+  };
+
+  // Fonction utilitaire pour obtenir le rating
+  const getRating = () => {
+    if (!external_ref) return null;
+    return external_ref.rating;
+  };
+
+  // Fonction utilitaire pour obtenir la date de sortie
+  const getReleaseDate = () => {
+    if (!external_ref) return null;
+    return external_ref.release_date;
+  };
 
   return (
     <>
       <div className="flex bg-tm-surface-light rounded-lg shadow-md mb-4 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-xl">
         {/* Image/Poster */}
         <div className="relative flex-shrink-0 w-20 sm:w-32">
-          {external_ref?.poster_url && !imageError ? (
+          {getPosterUrl() && !imageError ? (
             <img
-              src={external_ref.poster_url}
+              src={getPosterUrl()!}
               alt={title}
               className="w-full h-32 sm:h-48 object-cover rounded-l-lg"
               onError={() => setImageError(true)}
@@ -143,9 +183,17 @@ const EnrichedListItem: React.FC<EnrichedListItemProps> = ({
             </div>
           </div>
 
-          {external_ref && (
+          {external_ref && (getRating() || getReleaseDate()) && (
             <div className="flex items-center gap-2 mb-2 text-xs text-tm-text-secondary">
-              {/* ... (Rating and Release Date) ... */}
+              {getRating() && (
+                <span className="flex items-center gap-1">
+                  <span className="text-yellow-500">★</span>
+                  {getRating()}
+                </span>
+              )}
+              {getReleaseDate() && (
+                <span>{getReleaseDate()}</span>
+              )}
             </div>
           )}
 
@@ -153,13 +201,15 @@ const EnrichedListItem: React.FC<EnrichedListItemProps> = ({
             {description}
           </p>
 
-          {external_ref?.metadata && (
+          {external_ref && (getGenres().length > 0 || getBackdropUrl()) && (
             <div className="mt-auto pt-2">
-              <div className="flex flex-wrap gap-1 mb-1">
-                {external_ref.metadata.genres?.slice(0, 3).map((genre: string) => (
-                  <span key={genre} className="px-2 py-0.5 text-xs bg-tm-surface rounded-full">{genre}</span>
-                ))}
-              </div>
+              {getGenres().length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {getGenres().slice(0, 3).map((genre: string) => (
+                    <span key={genre} className="px-2 py-0.5 text-xs bg-tm-surface rounded-full">{genre}</span>
+                  ))}
+                </div>
+              )}
               <button onClick={() => setDetailsOpen(true)} className="flex items-center gap-1 text-xs text-primary hover:underline">
                 <OpenInNewIcon className="h-4 w-4" />
                 Voir détails
@@ -187,13 +237,22 @@ const EnrichedListItem: React.FC<EnrichedListItemProps> = ({
                   </Dialog.Title>
                   
                   <div className="mt-4">
-                    {external_ref?.metadata?.backdrop_url && !imageError && (
-                      <img src={external_ref.metadata.backdrop_url} alt={`${title} backdrop`} className="w-full h-48 object-cover rounded-lg mb-4" onError={() => setImageError(true)} />
+                    {getBackdropUrl() && !imageError && (
+                      <img src={getBackdropUrl()!} alt={`${title} backdrop`} className="w-full h-48 object-cover rounded-lg mb-4" onError={() => setImageError(true)} />
                     )}
                     <p className="text-sm text-tm-text-secondary">
                       {description}
                     </p>
-                    {/* {renderMetadataDetails()} */}
+                    {getGenres().length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-tm-text-primary mb-2">Genres</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {getGenres().map((genre: string) => (
+                            <span key={genre} className="px-3 py-1 text-xs bg-tm-surface rounded-full">{genre}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-4 flex justify-end">

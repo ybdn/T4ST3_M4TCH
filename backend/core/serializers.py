@@ -54,13 +54,54 @@ class ListItemSerializer(serializers.ModelSerializer):
         external = getattr(obj, 'external_ref', None)
         if not external:
             return None
+        
+        # Normaliser les données pour une structure cohérente
+        metadata = external.metadata or {}
+        
+        # Extraire les informations principales avec fallbacks
+        poster_url = external.poster_url or metadata.get('poster_url')
+        backdrop_url = external.backdrop_url or metadata.get('backdrop_url')
+        rating = external.rating or metadata.get('vote_average') or metadata.get('rating')
+        release_date = external.release_date or metadata.get('release_date') or metadata.get('first_air_date')
+        
+        # Normaliser les genres
+        genres = []
+        if metadata.get('genres'):
+            if isinstance(metadata['genres'], list):
+                # Si c'est une liste d'objets avec 'name'
+                if metadata['genres'] and isinstance(metadata['genres'][0], dict):
+                    genres = [g.get('name', g) for g in metadata['genres'] if g]
+                else:
+                    # Si c'est une liste de strings
+                    genres = [str(g) for g in metadata['genres']]
+            elif isinstance(metadata['genres'], str):
+                genres = [metadata['genres']]
+        
+        # Normaliser la description/overview
+        overview = (metadata.get('overview') or 
+                   metadata.get('description') or 
+                   metadata.get('summary') or 
+                   obj.description)
+        
+        # Extraire l'année de la date de sortie
+        year = None
+        if release_date:
+            if isinstance(release_date, str) and len(release_date) >= 4:
+                year = int(release_date[:4])
+            elif hasattr(release_date, 'year'):
+                year = release_date.year
+        
         return {
             'source': external.external_source,
-            'poster_url': external.poster_url,
-            'backdrop_url': external.backdrop_url,
-            'rating': external.rating,
-            'release_date': external.release_date,
-            'metadata': external.metadata,
+            'external_id': external.external_id,
+            'poster_url': poster_url,
+            'backdrop_url': backdrop_url,
+            'rating': rating,
+            'release_date': str(release_date) if release_date else None,
+            'year': year,
+            'genres': genres,
+            'overview': overview,
+            'metadata': metadata,  # Garder les métadonnées complètes pour référence
         }
 
 

@@ -8,4 +8,4 @@ redis
 djangorestframework-simplejwt
 requests
 dj-database-url
-psycopg2-binary
+# (doublon psycopg2-binary supprimé)
