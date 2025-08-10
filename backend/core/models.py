@@ -231,3 +231,165 @@ class APICache(models.Model):
     def clean_expired(cls):
         """Nettoie les entrées de cache expirées"""
         return cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class VersusSession(models.Model):
+    """Session de match versus pour un utilisateur"""
+    
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        COMPLETED = 'completed', 'Terminée'
+        PAUSED = 'paused', 'En pause'
+    
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='versus_sessions',
+        verbose_name="Utilisateur"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        verbose_name="Statut de la session"
+    )
+    current_round = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Round actuel"
+    )
+    total_rounds = models.PositiveIntegerField(
+        default=10,
+        verbose_name="Total de rounds"
+    )
+    score = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Score total"
+    )
+    started_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Début de session"
+    )
+    completed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Fin de session"
+    )
+    last_activity = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Dernière activité"
+    )
+    
+    class Meta:
+        verbose_name = "Session Versus"
+        verbose_name_plural = "Sessions Versus"
+        ordering = ['-started_at']
+    
+    def __str__(self):
+        return f"Session {self.id} - {self.user.username} ({self.get_status_display()})"
+    
+    @property
+    def progress_percentage(self):
+        """Pourcentage de progression de la session"""
+        if self.total_rounds == 0:
+            return 0
+        return min(100, (self.current_round / self.total_rounds) * 100)
+    
+    @property
+    def is_finished(self):
+        """Vérifie si la session est terminée"""
+        return self.status == self.Status.COMPLETED or self.current_round > self.total_rounds
+    
+    def complete_session(self):
+        """Marque la session comme terminée"""
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.save()
+
+
+class VersusRound(models.Model):
+    """Round individuel d'une session versus"""
+    
+    class Choice(models.TextChoices):
+        LIKE = 'like', 'J\'aime'
+        DISLIKE = 'dislike', 'Je n\'aime pas'
+        SKIP = 'skip', 'Passer'
+    
+    session = models.ForeignKey(
+        VersusSession,
+        on_delete=models.CASCADE,
+        related_name='rounds',
+        verbose_name="Session"
+    )
+    round_number = models.PositiveIntegerField(
+        verbose_name="Numéro du round"
+    )
+    item_title = models.CharField(
+        max_length=200,
+        verbose_name="Titre de l'élément"
+    )
+    item_description = models.TextField(
+        blank=True,
+        verbose_name="Description de l'élément"
+    )
+    item_category = models.CharField(
+        max_length=50,
+        verbose_name="Catégorie"
+    )
+    item_poster_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name="URL du poster"
+    )
+    compatibility_score = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Score de compatibilité"
+    )
+    user_choice = models.CharField(
+        max_length=10,
+        choices=Choice.choices,
+        blank=True,
+        null=True,
+        verbose_name="Choix de l'utilisateur"
+    )
+    answered_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Répondu le"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Créé le"
+    )
+    
+    class Meta:
+        verbose_name = "Round Versus"
+        verbose_name_plural = "Rounds Versus"
+        ordering = ['session', 'round_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['session', 'round_number'],
+                name='unique_round_per_session'
+            )
+        ]
+    
+    def __str__(self):
+        return f"Round {self.round_number} - {self.item_title}"
+    
+    @property
+    def is_answered(self):
+        """Vérifie si le round a été répondu"""
+        return self.user_choice is not None
+    
+    def submit_choice(self, choice):
+        """Enregistre le choix de l'utilisateur"""
+        self.user_choice = choice
+        self.answered_at = timezone.now()
+        self.save()
+        
+        # Incrémenter le round de la session
+        if not self.session.is_finished:
+            self.session.current_round += 1
+            if self.session.current_round > self.session.total_rounds:
+                self.session.complete_session()
+            else:
+                self.session.save()

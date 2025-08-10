@@ -1162,3 +1162,303 @@ def get_external_details(request, source, external_id):
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# === Versus Session Views ===
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def versus_session(request):
+    """
+    GET: Récupère ou crée une session versus active pour l'utilisateur
+    POST: Crée une nouvelle session versus
+    """
+    from .models import VersusSession, VersusRound
+    
+    if request.method == 'GET':
+        # Récupère la session active ou crée une nouvelle
+        session = VersusSession.objects.filter(
+            user=request.user,
+            status=VersusSession.Status.ACTIVE
+        ).first()
+        
+        if not session:
+            # Créer une nouvelle session
+            session = VersusSession.objects.create(
+                user=request.user,
+                total_rounds=10
+            )
+            # Générer les rounds initiaux
+            _generate_sample_rounds(session)
+        
+        # Récupérer le round actuel
+        current_round_obj = session.rounds.filter(
+            round_number=session.current_round
+        ).first()
+        
+        return Response({
+            'session': {
+                'id': session.id,
+                'status': session.status,
+                'current_round': session.current_round,
+                'total_rounds': session.total_rounds,
+                'progress_percentage': session.progress_percentage,
+                'is_finished': session.is_finished,
+                'score': session.score,
+                'started_at': session.started_at,
+            },
+            'current_round': {
+                'id': current_round_obj.id if current_round_obj else None,
+                'round_number': current_round_obj.round_number if current_round_obj else None,
+                'item_title': current_round_obj.item_title if current_round_obj else None,
+                'item_description': current_round_obj.item_description if current_round_obj else None,
+                'item_category': current_round_obj.item_category if current_round_obj else None,
+                'item_poster_url': current_round_obj.item_poster_url if current_round_obj else None,
+                'compatibility_score': current_round_obj.compatibility_score if current_round_obj else None,
+                'is_answered': current_round_obj.is_answered if current_round_obj else False,
+            } if current_round_obj else None
+        })
+    
+    elif request.method == 'POST':
+        # Terminer les sessions actives existantes
+        VersusSession.objects.filter(
+            user=request.user,
+            status=VersusSession.Status.ACTIVE
+        ).update(status=VersusSession.Status.COMPLETED)
+        
+        # Créer une nouvelle session
+        total_rounds = request.data.get('total_rounds', 10)
+        session = VersusSession.objects.create(
+            user=request.user,
+            total_rounds=total_rounds
+        )
+        
+        # Générer les rounds
+        _generate_sample_rounds(session)
+        
+        return Response({
+            'session': {
+                'id': session.id,
+                'status': session.status,
+                'current_round': session.current_round,
+                'total_rounds': session.total_rounds,
+                'progress_percentage': session.progress_percentage,
+                'is_finished': session.is_finished,
+                'score': session.score,
+                'started_at': session.started_at,
+            }
+        }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_choice(request, round_id):
+    """
+    Soumet le choix de l'utilisateur pour un round donné
+    """
+    from .models import VersusRound
+    
+    try:
+        round_obj = VersusRound.objects.get(
+            id=round_id,
+            session__user=request.user
+        )
+        
+        # Vérifier que la session n'est pas terminée
+        if round_obj.session.is_finished:
+            return Response(
+                {'error': 'Cette session est déjà terminée'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier que le round n'a pas déjà été répondu
+        if round_obj.is_answered:
+            return Response(
+                {'error': 'Ce round a déjà été répondu'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        choice = request.data.get('choice')
+        if choice not in ['like', 'dislike', 'skip']:
+            return Response(
+                {'error': 'Choix invalide. Doit être: like, dislike ou skip'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Enregistrer le choix
+        round_obj.submit_choice(choice)
+        
+        # Calculer le score si c'est un like
+        if choice == 'like':
+            round_obj.session.score += round_obj.compatibility_score
+            round_obj.session.save()
+        
+        # Préparer la réponse
+        response_data = {
+            'success': True,
+            'choice': choice,
+            'session': {
+                'id': round_obj.session.id,
+                'current_round': round_obj.session.current_round,
+                'total_rounds': round_obj.session.total_rounds,
+                'progress_percentage': round_obj.session.progress_percentage,
+                'is_finished': round_obj.session.is_finished,
+                'score': round_obj.session.score,
+            }
+        }
+        
+        # Si la session est terminée, ajouter un résumé
+        if round_obj.session.is_finished:
+            rounds = round_obj.session.rounds.all()
+            likes = rounds.filter(user_choice='like').count()
+            dislikes = rounds.filter(user_choice='dislike').count()
+            skips = rounds.filter(user_choice='skip').count()
+            
+            response_data['summary'] = {
+                'total_score': round_obj.session.score,
+                'likes': likes,
+                'dislikes': dislikes,
+                'skips': skips,
+                'completion_time': round_obj.session.completed_at,
+            }
+        
+        return Response(response_data)
+        
+    except VersusRound.DoesNotExist:
+        return Response(
+            {'error': 'Round introuvable'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Submit choice error: {e}")
+        return Response(
+            {'error': 'Erreur lors de l\'enregistrement du choix'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_round(request, round_id):
+    """
+    Récupère les détails d'un round spécifique
+    """
+    from .models import VersusRound
+    
+    try:
+        round_obj = VersusRound.objects.get(
+            id=round_id,
+            session__user=request.user
+        )
+        
+        return Response({
+            'id': round_obj.id,
+            'round_number': round_obj.round_number,
+            'item_title': round_obj.item_title,
+            'item_description': round_obj.item_description,
+            'item_category': round_obj.item_category,
+            'item_poster_url': round_obj.item_poster_url,
+            'compatibility_score': round_obj.compatibility_score,
+            'user_choice': round_obj.user_choice,
+            'is_answered': round_obj.is_answered,
+            'answered_at': round_obj.answered_at,
+        })
+        
+    except VersusRound.DoesNotExist:
+        return Response(
+            {'error': 'Round introuvable'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+def _generate_sample_rounds(session):
+    """
+    Génère des rounds d'exemple pour une session
+    """
+    from .models import VersusRound
+    
+    sample_items = [
+        {
+            'title': 'Blade Runner 2049',
+            'description': 'Un chef-d\'œuvre visuel de science-fiction qui explore l\'humanité.',
+            'category': 'Films',
+            'compatibility_score': 92,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg'
+        },
+        {
+            'title': 'Stranger Things',
+            'description': 'Une série nostalgique qui mélange horreur et aventure.',
+            'category': 'Séries',
+            'compatibility_score': 87,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg'
+        },
+        {
+            'title': 'Bohemian Rhapsody',
+            'description': 'L\'histoire captivante du groupe Queen et de Freddie Mercury.',
+            'category': 'Musique',
+            'compatibility_score': 95,
+            'poster_url': 'https://i.scdn.co/image/ab67616d0000b2735e5c4ac5ff7b8217cf59c93e'
+        },
+        {
+            'title': 'Dune',
+            'description': 'Une épopée de science-fiction époustouflante sur une planète désertique.',
+            'category': 'Films',
+            'compatibility_score': 89,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg'
+        },
+        {
+            'title': 'The Witcher',
+            'description': 'Un sorceleur dans un monde fantastique plein de magie et de monstres.',
+            'category': 'Séries',
+            'compatibility_score': 84,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/cZ0d3rtvXPVvuiX22sP79K3Hmjz.jpg'
+        },
+        {
+            'title': 'Imagine Dragons - Evolve',
+            'description': 'Album rock alternatif avec des hits énergiques.',
+            'category': 'Musique',
+            'compatibility_score': 78,
+            'poster_url': 'https://i.scdn.co/image/ab67616d0000b273b2d122f9e73c0d8b5f8b2db3'
+        },
+        {
+            'title': 'Interstellar',
+            'description': 'Un voyage émotionnel à travers l\'espace et le temps.',
+            'category': 'Films',
+            'compatibility_score': 91,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'
+        },
+        {
+            'title': 'The Mandalorian',
+            'description': 'Les aventures d\'un chasseur de primes dans l\'univers Star Wars.',
+            'category': 'Séries',
+            'compatibility_score': 93,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg'
+        },
+        {
+            'title': 'Billie Eilish - Happier Than Ever',
+            'description': 'Album pop alternatif introspectif et émotionnel.',
+            'category': 'Musique',
+            'compatibility_score': 82,
+            'poster_url': 'https://i.scdn.co/image/ab67616d0000b273a91c10fe9472d9bd89802e5a'
+        },
+        {
+            'title': 'Avatar: The Way of Water',
+            'description': 'Suite épique avec des visuels sous-marins à couper le souffle.',
+            'category': 'Films',
+            'compatibility_score': 88,
+            'poster_url': 'https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg'
+        }
+    ]
+    
+    # Créer les rounds
+    for i in range(min(session.total_rounds, len(sample_items))):
+        item = sample_items[i]
+        VersusRound.objects.create(
+            session=session,
+            round_number=i + 1,
+            item_title=item['title'],
+            item_description=item['description'],
+            item_category=item['category'],
+            compatibility_score=item['compatibility_score'],
+            item_poster_url=item['poster_url']
+        )

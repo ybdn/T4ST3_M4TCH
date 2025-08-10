@@ -6,7 +6,8 @@ from .views import (
     search_items, get_suggestions, quick_add_item,
     search_external, get_trending_external, enrich_list_item, 
     import_from_external, get_external_details,
-    get_trending_suggestions, get_similar_suggestions
+    get_trending_suggestions, get_similar_suggestions,
+    versus_session, submit_choice, get_round
 )
 
 router = DefaultRouter()
@@ -30,6 +31,10 @@ urlpatterns = [
     # Nouveaux endpoints pour les suggestions enrichies
     path('suggestions/trending/<str:category>/', get_trending_suggestions, name='get_trending_suggestions'),
     path('suggestions/similar/<int:item_id>/', get_similar_suggestions, name='get_similar_suggestions'),
+    # Versus session endpoints
+    path('versus/session/', versus_session, name='versus_session'),
+    path('versus/round/<int:round_id>/choice/', submit_choice, name='submit_choice'),
+    path('versus/round/<int:round_id>/', get_round, name='get_round'),
     # Nested routes for list items
     path('lists/<int:list_pk>/items/', ListItemViewSet.as_view({
         'get': 'list',
