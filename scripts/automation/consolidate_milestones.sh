@@ -37,8 +37,12 @@ changed=0
 
 for code in M1 M2 M3 M4 M5 M6; do
   short_ms_num=$(gh api repos/:owner/:repo/milestones --jq ".[] | select(.title == \"$code\") | .number" || true)
-  [[ -z "$short_ms_num" ]] && continue
-  target_name="${target_names[$code]}"
+  if [[ -z "${short_ms_num:-}" ]]; then
+    continue
+  fi
+  target_name="${target_names[$code]:-}"
+  if [[ -z "$target_name" ]]; then
+    echo "Mapping manquant pour $code" >&2; continue; fi
   # Vérifie existence du milestone cible
   target_ms_num=$(gh api repos/:owner/:repo/milestones --jq ".[] | select(.title == \"$target_name\") | .number" || true)
   if [[ -z "$target_ms_num" ]]; then
