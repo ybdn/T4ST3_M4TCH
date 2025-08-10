@@ -5,7 +5,10 @@ from rest_framework import status, viewsets, serializers
 from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
-from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
+from .serializers import (
+    RegisterSerializer, ListSerializer, ListItemSerializer,
+    QuickAddItemSerializer, ImportExternalSerializer
+)
 from .models import List, ListItem, ExternalReference
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
@@ -310,22 +313,16 @@ def quick_add_item(request):
         "category": "FILMS|SERIES|MUSIQUE|LIVRES"
     }
     """
-    title = request.data.get('title', '').strip()
-    description = request.data.get('description', '').strip()
-    category = request.data.get('category', '').strip()
+    # Use serializer for validation
+    serializer = QuickAddItemSerializer(data=request.data)
+    if not serializer.is_valid():
+        logger.debug(f"Quick add validation failed: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validation
-    if not title:
-        return Response(
-            {'error': 'Le titre est obligatoire'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if category not in ['FILMS', 'SERIES', 'MUSIQUE', 'LIVRES']:
-        return Response(
-            {'error': 'Catégorie invalide'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    validated_data = serializer.validated_data
+    title = validated_data['title']
+    description = validated_data.get('description', '')
+    category = validated_data['category']
     
     try:
         # Récupérer ou créer la liste pour cette catégorie
