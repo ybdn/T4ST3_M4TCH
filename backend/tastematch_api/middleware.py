@@ -31,6 +31,15 @@ class RequestIdFilter:
     """Ajoute request_id / correlation_id / host / environment aux records de log."""
 
     def filter(self, record):  # noqa: D401
+        """
+        Add request_id, correlation_id, host, and environment attributes to the log record.
+
+        Args:
+            record: The log record to be filtered and augmented.
+
+        Returns:
+            bool: Always returns True to allow the log record to be processed.
+        """
         _local = RequestIdMiddleware.local
         record.request_id = getattr(_local, 'request_id', '-')
         record.correlation_id = getattr(_local, 'correlation_id', record.request_id)
