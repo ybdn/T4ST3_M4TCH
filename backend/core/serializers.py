@@ -199,9 +199,10 @@ class SocialProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_stats(self, obj):  # type: ignore[override]
-        # Comptage des amis acceptés
-        friends_count = len(Friendship.get_friends(obj.user))
+    def get_stats(self, obj):
+        # Comptage des amis acceptés (get_friends retourne déjà une liste)
+        friends = Friendship.get_friends(obj.user)
+        friends_count = len(friends)
         # Demandes reçues en attente
         pending_requests = Friendship.objects.filter(
             addressee=obj.user,
