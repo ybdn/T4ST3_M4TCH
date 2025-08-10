@@ -114,12 +114,13 @@ Un nouvel endpoint permet maintenant d'enregistrer les actions utilisateur sur l
 
 #### Règles clés
 
-- Idempotent: répéter la même action ne crée pas de doublon (même preference_id, `updated=false`).
-- Changer d'action (ex: like -> add) met à jour la préférence (`updated=true`).
-- `added` déclenche la création (ou réutilisation) d'une liste catégorie + insertion item + référence externe.
+- Idempotence stricte: même action répétée => même `preference_id`, `updated=false`.
+- `updated=true` uniquement si l'action change (ex: liked -> added).
+- Passage vers `added` (création directe ou transition) insère un list item; répéter `added` n'insère rien.
+- Stats profil: `total_matches` incrémenté seulement à la première interaction sur un contenu; `successful_matches` uniquement lors d'un passage vers `added`.
 - Validation stricte: action inconnue => HTTP 400.
 
-Voir aussi `docs/match_action_endpoint.md` pour plus de détails.
+Voir aussi `docs/match_action_endpoint.md` pour plus de détails (scénarios, statuts, idempotence étendue).
 
 ## Stack technologique
 

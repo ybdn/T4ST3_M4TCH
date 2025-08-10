@@ -61,16 +61,23 @@ Champs `list_id` / `list_item_id` présents uniquement si action finale == `adde
 
 1. Idempotence stricte: répéter la même action retourne le même `preference_id` et `updated=false`.
 2. Changement d'action (like -> add, dislike -> like, etc.) met à jour la préférence (`updated=true`).
-3. Passage vers `added` insère l'item dans la liste catégorie de l'utilisateur (créée si nécessaire) avec position suivante.
+3. Passage vers `added` insère l'item dans la liste catégorie de l'utilisateur (créée si nécessaire) avec position suivante UNIQUEMENT si création directe ou transition depuis une autre action (add répété => aucune duplication).
 4. Enrichissement externe asynchrone (best-effort) — échec d'enrichissement n'annule pas la création.
 5. Les actions ignorées (`skip|skipped`) sont validées mais ne créent pas d'élément de liste.
+6. Statistiques profil:
 
-## Tests ajoutés
+ - `total_matches` n'augmente qu'à la première interaction avec un contenu donné.
+ - `successful_matches` n'augmente que lors d'un passage vers `added` (création en `added` ou transition). Répéter `added` ensuite n'incrémente plus.
+
+## Tests principaux
 
 - Succès like
 - Idempotence like -> like
 - Changement like -> add (updated=true)
+- Idempotence add -> add (pas de second updated ni second list item)
 - Action invalide -> 400
+- Statistiques: total_matches idempotent
+- Statistiques: successful_matches uniquement sur passage vers added
 
 ## Évolutions futures possibles
 
