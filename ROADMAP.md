@@ -376,6 +376,35 @@ Dépendances: #ID
 
 Créer un Projet GitHub (Backlog / In Progress / Review / Done) et lier les issues ci‑dessus.
 
+### Automatisation création d'issues
+
+Un script + JSON listent toutes les issues avec leurs métadonnées.
+
+Fichiers:
+
+- `scripts/automation/issues.json`
+- `scripts/automation/create_issues.sh`
+
+Pré‑requis: `gh` CLI + `jq` installés et authentifiés (`gh auth login`).
+
+Exécution dry‑run:
+
+```bash
+./scripts/automation/create_issues.sh --dry-run
+```
+
+Création réelle:
+
+```bash
+./scripts/automation/create_issues.sh
+```
+
+Le script:
+
+- Crée les milestones manquants (M1..M6)
+- Ignore une issue déjà existante (matching exact title)
+- Assigne labels + milestone
+
 ---
 
-_Dernière mise à jour : ajout vue compacte par milestone._
+_Dernière mise à jour : ajout script d'automatisation issues._
