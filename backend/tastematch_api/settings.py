@@ -16,6 +16,13 @@ from pathlib import Path
 import socket
 import uuid
 
+# Tentative d'import du formatter JSON; fallback console si absent (évite crash avant installation dépendances)
+try:
+    from pythonjsonlogger import jsonlogger  # type: ignore
+    HAVE_JSON_LOGGER = True
+except Exception:  # pragma: no cover - robust fallback
+    HAVE_JSON_LOGGER = False
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -218,10 +225,17 @@ LOGGING = {
         },
     },
     'formatters': {
-        'json': {
-            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
-            'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s %(correlation_id)s %(host)s %(environment)s',
-        },
+        'json': (
+            {
+                '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+                'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s %(correlation_id)s %(host)s %(environment)s',
+            }
+            if HAVE_JSON_LOGGER
+            else {
+                # Fallback simple texte si lib non dispo
+                'format': '[%(asctime)s] %(levelname)s %(name)s %(request_id)s - %(message)s'
+            }
+        ),
         'console': {
             'format': '[%(asctime)s] %(levelname)s %(name)s %(request_id)s - %(message)s'
         },
