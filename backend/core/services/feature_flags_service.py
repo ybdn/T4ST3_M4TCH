@@ -65,7 +65,7 @@ class FeatureFlagsService:
         
         # Utilise un hash déterministe pour le rollout progressif
         hash_input = f"{user_id}:{flag_name}"
-        hash_value = int(hashlib.sha256(hash_input.encode()).hexdigest()[:8], 16)
+        hash_value = int(hashlib.md5(hash_input.encode()).hexdigest()[:8], 16)
         user_percentage = hash_value % 100
         
         return user_percentage < flag_data['rollout_percentage']
