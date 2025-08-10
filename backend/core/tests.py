@@ -6,6 +6,7 @@ from django.conf import settings
 from unittest.mock import patch
 import os
 from django.contrib.auth.models import User
+from .models import UserProfile
 
 
 class MatchActionEndpointTestCase(APITestCase):
@@ -95,6 +96,56 @@ class MatchActionEndpointTestCase(APITestCase):
         resp = self.client.post(self.url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('action', resp.data)
+
+    def test_stats_total_matches_idempotent(self):
+        """total_matches ne doit s'incrémenter qu'à la première interaction d'un contenu."""
+        payload = {
+            'external_id': 'stats_movie_001',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'like',
+            'title': 'Blade Runner'
+        }
+        first = self.client.post(self.url, payload, format='json')
+        second = self.client.post(self.url, payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.total_matches, 1)
+        self.assertEqual(profile.successful_matches, 0)
+
+    def test_stats_successful_matches_only_on_added_transition(self):
+        """successful_matches augmente uniquement lors d'un passage à 'added'."""
+        base = {
+            'external_id': 'stats_movie_002',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'title': 'Arrival'
+        }
+        like = {**base, 'action': 'like'}
+        add = {**base, 'action': 'add'}
+        self.client.post(self.url, like, format='json')
+        self.client.post(self.url, add, format='json')
+        # Rejouer add pour vérifier idempotence sur successful_matches
+        self.client.post(self.url, add, format='json')
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.total_matches, 1)  # une seule préférence pour ce contenu
+        self.assertEqual(profile.successful_matches, 1)  # incrément uniquement lors transition vers added
+
+    def test_stats_successful_matches_add_idempotent(self):
+        """Deux actions 'add' successives sur le même contenu n'incrémentent qu'une fois successful_matches."""
+        payload = {
+            'external_id': 'stats_movie_003',
+            'source': 'tmdb',
+            'category': 'FILMS',
+            'action': 'add',
+            'title': 'Dune'
+        }
+        self.client.post(self.url, payload, format='json')
+        self.client.post(self.url, payload, format='json')
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.total_matches, 1)
+        self.assertEqual(profile.successful_matches, 1)
 
 
 class ConfigEndpointTestCase(APITestCase):
