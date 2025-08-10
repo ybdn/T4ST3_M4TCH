@@ -231,3 +231,224 @@ class APICache(models.Model):
     def clean_expired(cls):
         """Nettoie les entrées de cache expirées"""
         return cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class VersusMatch(models.Model):
+    """Modèle pour une session de versus entre utilisateurs"""
+    
+    class Status(models.TextChoices):
+        WAITING = 'WAITING', 'En attente'
+        ACTIVE = 'ACTIVE', 'En cours'
+        COMPLETED = 'COMPLETED', 'Terminé'
+        CANCELLED = 'CANCELLED', 'Annulé'
+    
+    category = models.CharField(
+        max_length=20,
+        choices=List.Category.choices,
+        verbose_name="Catégorie"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.WAITING,
+        verbose_name="Statut"
+    )
+    current_round = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Round actuel"
+    )
+    max_rounds = models.PositiveIntegerField(
+        default=10,
+        verbose_name="Nombre maximum de rounds"
+    )
+    completed = models.BooleanField(
+        default=False,
+        verbose_name="Terminé"
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_matches',
+        verbose_name="Créé par"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Date de modification"
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fin"
+    )
+    
+    class Meta:
+        verbose_name = "Match Versus"
+        verbose_name_plural = "Matchs Versus"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Match {self.get_category_display()} - {self.get_status_display()}"
+    
+    def get_participants(self):
+        """Retourne les participants au match"""
+        return User.objects.filter(versus_participations__match=self)
+    
+    def is_participant(self, user):
+        """Vérifie si un utilisateur est participant au match"""
+        return self.participants.filter(user=user).exists()
+    
+    def can_start(self):
+        """Vérifie si le match peut commencer"""
+        return (self.status == self.Status.WAITING and 
+                self.participants.count() >= 2)
+    
+    def mark_completed(self):
+        """Marque le match comme terminé"""
+        self.status = self.Status.COMPLETED
+        self.completed = True
+        self.completed_at = timezone.now()
+        self.save()
+
+
+class VersusParticipant(models.Model):
+    """Modèle pour les participants d'un match versus"""
+    
+    match = models.ForeignKey(
+        VersusMatch,
+        on_delete=models.CASCADE,
+        related_name='participants',
+        verbose_name="Match"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='versus_participations',
+        verbose_name="Utilisateur"
+    )
+    score = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Score"
+    )
+    joined_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de participation"
+    )
+    
+    class Meta:
+        verbose_name = "Participant Versus"
+        verbose_name_plural = "Participants Versus"
+        unique_together = ['match', 'user']
+        ordering = ['-score', 'joined_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.match} (Score: {self.score})"
+
+
+class VersusRound(models.Model):
+    """Modèle pour un round d'un match versus"""
+    
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'En attente'
+        ACTIVE = 'ACTIVE', 'En cours'
+        COMPLETED = 'COMPLETED', 'Terminé'
+    
+    match = models.ForeignKey(
+        VersusMatch,
+        on_delete=models.CASCADE,
+        related_name='rounds',
+        verbose_name="Match"
+    )
+    round_number = models.PositiveIntegerField(
+        verbose_name="Numéro du round"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="Statut"
+    )
+    item1 = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        related_name='rounds_as_item1',
+        verbose_name="Élément 1"
+    )
+    item2 = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        related_name='rounds_as_item2',
+        verbose_name="Élément 2"
+    )
+    winner_item = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        related_name='won_rounds',
+        null=True,
+        blank=True,
+        verbose_name="Élément gagnant"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fin"
+    )
+    
+    class Meta:
+        verbose_name = "Round Versus"
+        verbose_name_plural = "Rounds Versus"
+        unique_together = ['match', 'round_number']
+        ordering = ['match', 'round_number']
+    
+    def __str__(self):
+        return f"Round {self.round_number} - {self.match}"
+    
+    def mark_completed(self, winner_item):
+        """Marque le round comme terminé avec un gagnant"""
+        self.winner_item = winner_item
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.save()
+
+
+class VersusVote(models.Model):
+    """Modèle pour les votes dans un round versus"""
+    
+    round = models.ForeignKey(
+        VersusRound,
+        on_delete=models.CASCADE,
+        related_name='votes',
+        verbose_name="Round"
+    )
+    participant = models.ForeignKey(
+        VersusParticipant,
+        on_delete=models.CASCADE,
+        related_name='votes',
+        verbose_name="Participant"
+    )
+    chosen_item = models.ForeignKey(
+        ListItem,
+        on_delete=models.CASCADE,
+        related_name='received_votes',
+        verbose_name="Élément choisi"
+    )
+    voted_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date du vote"
+    )
+    
+    class Meta:
+        verbose_name = "Vote Versus"
+        verbose_name_plural = "Votes Versus"
+        unique_together = ['round', 'participant']
+        ordering = ['voted_at']
+    
+    def __str__(self):
+        return f"Vote de {self.participant.user.username} pour {self.chosen_item.title}"

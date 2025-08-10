@@ -5,8 +5,8 @@ from rest_framework import status, viewsets, serializers
 from django.db import models
 from django.db.models import Q, Count
 from django.core.cache import cache
-from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer
-from .models import List, ListItem, ExternalReference
+from .serializers import RegisterSerializer, ListSerializer, ListItemSerializer, VersusMatchStateSerializer
+from .models import List, ListItem, ExternalReference, VersusMatch, VersusParticipant, VersusRound, VersusVote
 from .permissions import IsOwnerOrReadOnly
 from .services.external_enrichment_service import ExternalEnrichmentService
 import json
@@ -1160,5 +1160,58 @@ def get_external_details(request, source, external_id):
         logger.error(f"External details error: {e}")
         return Response(
             {'error': f'Erreur lors de la récupération des détails: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# =====================================
+# VERSUS ENDPOINTS
+# =====================================
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_versus_match_state(request, match_id):
+    """
+    Récupère l'état actuel d'un match versus
+    GET /versus/matches/{id}
+    
+    Retourne:
+    - Round actuel avec les éléments à comparer
+    - Scores des participants 
+    - Statut du match (en cours, terminé, etc.)
+    - Champ terminé (bool)
+    
+    Permissions:
+    - Seuls les participants peuvent voir les détails complets
+    - Les non-participants voient une version filtrée
+    """
+    try:
+        # Récupérer le match
+        match = VersusMatch.objects.select_related('created_by').prefetch_related(
+            'participants__user',
+            'rounds__item1__external_ref',
+            'rounds__item2__external_ref',
+            'rounds__winner_item',
+            'rounds__votes__participant__user'
+        ).get(id=match_id)
+        
+        # Sérialiser avec le contexte de l'utilisateur actuel
+        serializer = VersusMatchStateSerializer(match, context={'request': request})
+        
+        # Log pour audit (sans données sensibles)
+        logger.info(f"Match state accessed: match_id={match_id}, user={request.user.username}, is_participant={match.is_participant(request.user)}")
+        
+        return Response(serializer.data)
+        
+    except VersusMatch.DoesNotExist:
+        return Response(
+            {'error': 'Match non trouvé'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error getting match state: {e}")
+        return Response(
+            {'error': 'Erreur lors de la récupération de l\'état du match'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
