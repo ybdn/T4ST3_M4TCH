@@ -5,6 +5,9 @@ avec le package core.services/)
 
 import requests
 import random
+import time
+import logging
+import hashlib
 from typing import List as TypingList, Dict, Optional
 from django.contrib.auth.models import User
 from django.db.models import Q, Count, Avg
@@ -17,6 +20,8 @@ from .models import (
     List as TasteList, ListItem, ExternalReference, APICache
 )
 
+logger = logging.getLogger(__name__)
+
 
 class RecommendationService:
     """Service pour générer des recommandations personnalisées"""
@@ -28,6 +33,10 @@ class RecommendationService:
         self.google_books_api_key = getattr(settings, 'GOOGLE_BOOKS_API_KEY', '')
     
     def get_recommendations(self, user: User, category: str = None, count: int = 10) -> TypingList[Dict]:
+        """Retourne des recommandations hétérogènes filtrant le contenu déjà vu"""
+        start_time = time.time()
+        logger.info(f"Getting {count} recommendations for user {user.id}, category: {category or 'ALL'}")
+        
         # Collecte par catégorie
         per_category = {}
         if category:
@@ -38,6 +47,7 @@ class RecommendationService:
         items_per_category = max(1, max(1, count // len(categories)))
 
         for cat in categories:
+            cat_start_time = time.time()
             try:
                 if cat == 'FILMS':
                     items = self._get_movie_recommendations(user, items_per_category * 2)
@@ -56,7 +66,20 @@ class RecommendationService:
                 # Ordonner par score décroissant à l'intérieur de la catégorie
                 filtered_items.sort(key=lambda x: x.get('compatibility_score', 0), reverse=True)
                 per_category[cat] = filtered_items[:items_per_category]
-            except Exception:
+                
+                cat_time = time.time() - cat_start_time
+                logger.info(f"Category {cat}: {len(per_category[cat])} items in {cat_time:.3f}s")
+            except requests.RequestException as e:
+                cat_time = time.time() - cat_start_time
+                logger.error(f"Network error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
+                per_category[cat] = []
+            except KeyError as e:
+                cat_time = time.time() - cat_start_time
+                logger.error(f"Key error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
+                per_category[cat] = []
+            except (ValueError, TypeError) as e:
+                cat_time = time.time() - cat_start_time
+                logger.error(f"Data error getting {cat} recommendations: {e} (took {cat_time:.3f}s)")
                 per_category[cat] = []
 
         # Interleave: alterner les catégories pour éviter la monotonie
@@ -72,7 +95,17 @@ class RecommendationService:
             if len(mixed) >= count:
                 break
 
-        return mixed[:count]
+        # Vérifier l'unicité des external_id (requis par les critères d'acceptation)
+        seen_ids = set()
+        unique_mixed = []
+        for item in mixed:
+            if item['external_id'] not in seen_ids:
+                seen_ids.add(item['external_id'])
+                unique_mixed.append(item)
+        
+        total_time = time.time() - start_time
+        logger.info(f"Returned {len(unique_mixed)} unique recommendations in {total_time:.3f}s")
+        return unique_mixed[:count]
     
     def _get_movie_recommendations(self, user: User, count: int) -> TypingList[Dict]:
         if not self.tmdb_api_key:
@@ -289,11 +322,14 @@ class RecommendationService:
         return random.sample(shows, min(count * 2, len(shows)))
     
     def _filter_user_content(self, user: User, items: TypingList[Dict]) -> TypingList[Dict]:
+        """Filtre le contenu déjà vu par l'utilisateur (préférences + listes)"""
         if not items:
             return items
+        
         external_ids = [item['external_id'] for item in items]
         source = items[0]['source'] if items else ''
-        # Exclure uniquement les contenus déjà likés ou dislikés (pas les skipped)
+        
+        # Une seule requête pour récupérer les préférences déjà vues (liked/disliked uniquement)
         seen_preferences = set(
             UserPreference.objects.filter(
                 user=user,
@@ -302,15 +338,25 @@ class RecommendationService:
                 action__in=['liked', 'disliked']
             ).values_list('external_id', flat=True)
         )
-        seen_in_lists = set()
-        user_lists = TasteList.objects.filter(owner=user)
-        for user_list in user_lists:
-            list_external_ids = ExternalReference.objects.filter(
-                list_item__list=user_list, external_id__in=external_ids, external_source=source
+        
+        # Une seule requête pour récupérer les contenus déjà dans les listes utilisateur
+        seen_in_lists = set(
+            ExternalReference.objects.filter(
+                list_item__list__owner=user,
+                external_id__in=external_ids,
+                external_source=source
             ).values_list('external_id', flat=True)
-            seen_in_lists.update(list_external_ids)
+        )
+        
+        # Union des deux sets pour les IDs à exclure
         all_seen = seen_preferences.union(seen_in_lists)
-        return [item for item in items if item['external_id'] not in all_seen]
+        
+        # Retourner uniquement les items non vus
+        filtered_items = [item for item in items if item['external_id'] not in all_seen]
+        
+        user_hash = hashlib.sha256(str(user.id).encode()).hexdigest()[:8]
+        logger.debug(f"Filtered {len(items) - len(filtered_items)} seen items out of {len(items)} for user {user_hash}")
+        return filtered_items
     
     def _calculate_compatibility_score(self, user: User, content: Dict) -> float:
         base_score = 50.0
