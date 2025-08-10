@@ -542,6 +542,12 @@ class RecommendationServiceTestCase(TestCase):
             for field in required_fields:
                 self.assertIn(field, item)
                 self.assertIsNotNone(item[field])
+            # Champs normalisés DTO
+            self.assertIn('id', item)
+            self.assertIn('type', item)
+            self.assertIn('thumbnail', item)
+            # year peut être None mais la clé doit exister
+            self.assertIn('year', item)
     
     def test_no_duplicate_external_ids(self):
         """Test qu'il n'y a pas de doublons d'external_id"""
