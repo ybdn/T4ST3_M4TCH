@@ -121,11 +121,13 @@ const MatchPage: React.FC<MatchPageProps> = ({ onNavigate }) => {
     if (Array.isArray(meta.genre_ids) && meta.genre_ids.length > 0) {
       reasons.push("Genre compatible");
     }
-    const vote = typeof meta.vote_average === "number" ? meta.vote_average : undefined;
+    const vote =
+      typeof meta.vote_average === "number" ? meta.vote_average : undefined;
     if (vote !== undefined && vote > 7) {
       reasons.push("Très bien noté");
     }
-    const popularity = typeof meta.popularity === "number" ? meta.popularity : undefined;
+    const popularity =
+      typeof meta.popularity === "number" ? meta.popularity : undefined;
     if (popularity !== undefined && popularity > 100) {
       reasons.push("Populaire");
     }

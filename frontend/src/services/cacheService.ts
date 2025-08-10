@@ -12,19 +12,19 @@ class CacheService {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     });
   }
 
   get<T>(key: string): T | null {
     const item = this.cache.get(key);
-    
+
     if (!item) {
       return null;
     }
 
     const isExpired = Date.now() - item.timestamp > item.ttl;
-    
+
     if (isExpired) {
       this.cache.delete(key);
       return null;
@@ -47,11 +47,11 @@ class CacheService {
 
   // Méthodes utilitaires pour les clés de cache
   generateSearchKey(query: string, category?: string, limit?: number): string {
-    return `search:${query}:${category || 'all'}:${limit || 8}`;
+    return `search:${query}:${category || "all"}:${limit || 8}`;
   }
 
   generateSuggestionsKey(category?: string, limit?: number): string {
-    return `suggestions:${category || 'all'}:${limit || 6}`;
+    return `suggestions:${category || "all"}:${limit || 6}`;
   }
 
   generateListKey(listId: number): string {
@@ -71,7 +71,7 @@ class CacheService {
   invalidateSearch(): void {
     // Supprimer toutes les clés de recherche
     for (const key of this.cache.keys()) {
-      if (key.startsWith('search:')) {
+      if (key.startsWith("search:")) {
         this.delete(key);
       }
     }
@@ -80,7 +80,7 @@ class CacheService {
   invalidateSuggestions(): void {
     // Supprimer toutes les clés de suggestions
     for (const key of this.cache.keys()) {
-      if (key.startsWith('suggestions:')) {
+      if (key.startsWith("suggestions:")) {
         this.delete(key);
       }
     }
@@ -92,7 +92,7 @@ class CacheService {
     let validEntries = 0;
     let expiredEntries = 0;
 
-  for (const [, item] of this.cache.entries()) {
+    for (const [, item] of this.cache.entries()) {
       if (now - item.timestamp > item.ttl) {
         expiredEntries++;
       } else {
@@ -103,7 +103,7 @@ class CacheService {
     return {
       total: this.cache.size,
       valid: validEntries,
-      expired: expiredEntries
+      expired: expiredEntries,
     };
   }
 
