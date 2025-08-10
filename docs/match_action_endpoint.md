@@ -66,8 +66,8 @@ Champs `list_id` / `list_item_id` présents uniquement si action finale == `adde
 5. Les actions ignorées (`skip|skipped`) sont validées mais ne créent pas d'élément de liste.
 6. Statistiques profil:
 
- - `total_matches` n'augmente qu'à la première interaction avec un contenu donné.
- - `successful_matches` n'augmente que lors d'un passage vers `added` (création en `added` ou transition). Répéter `added` ensuite n'incrémente plus.
+- `total_matches` n'augmente qu'à la première interaction avec un contenu donné.
+- `successful_matches` n'augmente que lors d'un passage vers `added` (création en `added` ou transition). Répéter `added` ensuite n'incrémente plus.
 
 ## Tests principaux
 
